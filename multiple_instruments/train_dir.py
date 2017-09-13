@@ -12,6 +12,7 @@ from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
 from keras import backend as K
+from attention_block import SoftAttentionBlock
 import numpy as np
 import midi
 import random
@@ -24,8 +25,8 @@ compute_precision='float32'
 learning_rate = 0.002
 epochs = int(sys.argv[4])
 samples_per_epoch = int(sys.argv[5])
-step_size=1
 segLen=128
+step_size=segLen//2
 vecLen=88
 maxdelta=128
 maxinst=129
@@ -36,6 +37,7 @@ hidden_note=256
 hidden_inst=256
 filter_size=128
 kernel_size=7 ## midi program changes are by groups
+decoder_unit=hidden_delta+hidden_note+hidden_inst
 drop_rate=0.2 ## for powerful computer
 Normal=120.0
 defaultRes=256.0
@@ -164,9 +166,9 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
 def makeSegment(data, maxlen, step):
     sentences = []
     nextseq = []
-    for i in xrange(0, len(data) - maxlen, step):
+    for i in xrange(0, len(data) - 2*maxlen, step):
         sentences.append(data[i: i + maxlen])
-        nextseq.append(data[i + maxlen])
+        nextseq.append(data[i + maxlen: i + 2*maxlen])
     return sentences, nextseq
 
 def seg2vec(segment, nextseg, segLen, vecLen, maxdelta, maxinst):
@@ -175,20 +177,22 @@ def seg2vec(segment, nextseg, segLen, vecLen, maxdelta, maxinst):
     powers= np.zeros((len(segment), segLen, 1), dtype=np.uint8)
     insts = np.zeros((len(segment), segLen, maxinst), dtype=np.bool)
 
-    notes_n = np.zeros((len(segment), vecLen), dtype=np.bool)
-    times_n = np.zeros((len(segment), maxdelta), dtype=np.bool)
-    powers_n= np.zeros((len(segment), 1), dtype=np.uint8)
-    insts_n = np.zeros((len(segment), maxinst), dtype=np.bool)
+    notes_n = np.zeros((len(segment), segLen, vecLen), dtype=np.bool)
+    times_n = np.zeros((len(segment), segLen, maxdelta), dtype=np.bool)
+    powers_n= np.zeros((len(segment), segLen, 1), dtype=np.uint8)
+    insts_n = np.zeros((len(segment), segLen, maxinst), dtype=np.bool)
     for i, seg in enumerate(segment):
         for t, note in enumerate(seg):
             times[i, t, int(note[0])] = 1
             notes[i, t, int(note[1])] = 1
             insts[i, t, int(note[2])] = 1
-            powers[i, t,0] = int(note[3])
-        times_n[i, int(nextseg[i][0])] = 1
-        notes_n[i, int(nextseg[i][1])] = 1
-        insts_n[i, int(nextseg[i][2])] = 1
-        powers_n[i,0] = int(nextseg[i][3])
+            powers[i, t, 0] = int(note[3])
+    for i, seg in enumerate(nextseg):
+        for t, note in enumerate(seg):
+            times_n[i, t, int(note[0])] = 1
+            notes_n[i, t, int(note[1])] = 1
+            insts_n[i, t, int(note[2])] = 1
+            powers_n[i, t, 0] = int(note[3])
     return notes, times, insts, powers, notes_n, times_n, insts_n, powers_n
 
 def generator(path_name, step_size, batch_size):
@@ -224,42 +228,48 @@ def main():
     # network:
     with tf.device('/gpu:0'):
         noteInput  = Input(shape=(segLen, vecLen))
-        noteEncode = LSTM(hidden_note, input_shape=(segLen, vecLen), return_sequences=True, dropout=drop_rate)(noteInput)
-        noteEncode = LSTM(hidden_note, return_sequences=False, dropout=drop_rate)(noteEncode)
+        noteAtt    = SoftAttentionBlock(noteInput)
+        noteEncode = LSTM(hidden_note, input_shape=(segLen, vecLen), return_sequences=True, dropout=drop_rate)(noteAtt)
+        noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
 
     with tf.device('/gpu:1'):
         deltaInput = Input(shape=(segLen, maxdelta))
-        deltaEncode = LSTM(hidden_delta, input_shape=(segLen, maxdelta), return_sequences=True, dropout=drop_rate)(deltaInput)
-        deltaEncode = LSTM(hidden_delta, return_sequences=False, dropout=drop_rate)(deltaEncode)
+        deltaAtt   = SoftAttentionBlock(deltaInput)
+        deltaEncode = LSTM(hidden_delta, input_shape=(segLen, maxdelta), return_sequences=True, dropout=drop_rate)(deltaAtt)
+        deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
 
     with tf.device('/gpu:2'):
         instInput = Input(shape=(segLen, maxinst))
         instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu')(instInput)
+        instEncode   = SoftAttentionBlock(instEncode)
         instEncode   = LSTM(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
-        instEncode   = LSTM(hidden_inst, return_sequences=False, dropout=drop_rate)(instEncode)
+        instEncode   = LSTM(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
 
     with tf.device('/gpu:3'):
-        codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1)
+        encode = concatenate([noteEncode, deltaEncode, instEncode], axis=-1)
+        encode = SoftAttentionBlock(encode, input_ts=segLen)
+        decode = LSTM(decoder_unit, return_sequences=True, dropout=drop_rate)(encode)
+        decode = LSTM(decoder_unit, return_sequences=True, dropout=drop_rate)(decode)
 
-        batchNormNote_0 = BatchNormalization()(codec)
-        fc_notes = Dense(vecLen*2, kernel_initializer='normal', activation='relu')(batchNormNote_0)
-        fc_notes = BatchNormalization()(fc_notes)
-        pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output')(fc_notes) ## output PMF
+        batchNormNote_0 = TimeDistributed(BatchNormalization())(decode)
+        fc_notes = TimeDistributed(Dense(vecLen*2, kernel_initializer='normal', activation='relu'))(batchNormNote_0)
+        fc_notes = TimeDistributed(BatchNormalization())(fc_notes)
+        pred_notes = TimeDistributed(Dense(vecLen, kernel_initializer='normal', activation='softmax'), name='note_output')(fc_notes) ## output PMF
 
-        batchNormDelta_0 = BatchNormalization()(codec)
-        fc_delta = Dense(maxdelta*2, kernel_initializer='normal', activation='relu')(batchNormDelta_0)
-        fc_delta = BatchNormalization()(fc_delta)
-        pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output')(fc_delta) ## output PMF
+        batchNormDelta_0 = TimeDistributed(BatchNormalization())(decode)
+        fc_delta = TimeDistributed(Dense(maxdelta*2, kernel_initializer='normal', activation='relu'))(batchNormDelta_0)
+        fc_delta = TimeDistributed(BatchNormalization())(fc_delta)
+        pred_delta = TimeDistributed(Dense(maxdelta, kernel_initializer='normal', activation='softmax'), name='time_output')(fc_delta) ## output PMF
 
-        batchNormInst_0 = BatchNormalization()(codec)
-        fc_inst = Dense(maxinst*2, kernel_initializer='normal', activation='relu')(batchNormInst_0)
-        fc_inst = BatchNormalization()(fc_inst)
-        pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output')(fc_inst) ## output PMF
+        batchNormInst_0 = TimeDistributed(BatchNormalization())(decode)
+        fc_inst = TimeDistributed(Dense(maxinst*2, kernel_initializer='normal', activation='relu'))(batchNormInst_0)
+        fc_inst = TimeDistributed(BatchNormalization())(fc_inst)
+        pred_inst = TimeDistributed(Dense(maxinst, kernel_initializer='normal', activation='softmax'), name='inst_output')(fc_inst) ## output PMF
 
-        batchNormPower_0 = BatchNormalization()(codec)
-        fc_power = Dense(maxpower, kernel_initializer='normal', activation='relu')(batchNormPower_0)
-        fc_power = BatchNormalization()(fc_power)
-        pred_power = Dense(1, kernel_initializer='normal', activation='relu', name='power_output')(fc_power) ## output regression >= 0
+        batchNormPower_0 = TimeDistributed(BatchNormalization())(decode)
+        fc_power = TimeDistributed(Dense(maxpower, kernel_initializer='normal', activation='relu'))(batchNormPower_0)
+        fc_power = TimeDistributed(BatchNormalization())(fc_power)
+        pred_power = TimeDistributed(Dense(1, kernel_initializer='normal', activation='relu'), name='power_output')(fc_power) ## output regression >= 0
     aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, pred_inst, pred_power])
     checkPoint = ModelCheckpoint(filepath="weights-{epoch:04d}-{loss:.2f}-{val_loss:.2f}.h5", verbose=1, save_best_only=False, save_weights_only=True, period=3)
     Logs = CSVLogger('logs.csv', separator=',', append=True)
