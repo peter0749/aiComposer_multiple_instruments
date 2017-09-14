@@ -228,14 +228,14 @@ def main():
         noteAcc    = SoftAttentionBlock(noteInput)
         noteEncode = LSTM(hidden_note, input_shape=(segLen, vecLen), return_sequences=True, dropout=drop_rate)(noteAcc)
         noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
-        noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
+        noteEncode = LSTM(hidden_note, return_sequences=False, dropout=drop_rate)(noteEncode)
 
     with tf.device('/gpu:1'):
         deltaInput = Input(shape=(segLen, maxdelta))
         deltaAcc   = SoftAttentionBlock(deltaInput)
         deltaEncode = LSTM(hidden_delta, input_shape=(segLen, maxdelta), return_sequences=True, dropout=drop_rate)(deltaAcc)
         deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
-        deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
+        deltaEncode = LSTM(hidden_delta, return_sequences=False, dropout=drop_rate)(deltaEncode)
 
     with tf.device('/gpu:2'):
         instInput = Input(shape=(segLen, maxinst))
@@ -243,12 +243,10 @@ def main():
         instEncode   = SoftAttentionBlock(instEncode)
         instEncode   = LSTM(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
         instEncode   = LSTM(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
-        instEncode   = LSTM(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
+        instEncode   = LSTM(hidden_inst, return_sequences=False, dropout=drop_rate)(instEncode)
 
     with tf.device('/gpu:3'):
         codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1)
-        codec = SoftAttentionBlock(codec, segLen)
-        codec = Flatten()(codec)
 
         batchNormNote_0 = BatchNormalization()(codec)
         fc_notes = Dense(vecLen*2, kernel_initializer='normal', activation='relu')(batchNormNote_0)
