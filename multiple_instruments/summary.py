@@ -106,3 +106,4 @@ aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, 
 aiComposer.summary()
 from keras.utils import plot_model
 plot_model(aiComposer, to_file='model.png', show_shapes=True)
+
