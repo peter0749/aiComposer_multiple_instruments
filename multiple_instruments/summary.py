@@ -12,7 +12,7 @@ from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
 from keras import backend as K
-from attention_block import SoftAttentionBlock
+from attention_block import SoftAttentionBlock, Attention
 import numpy as np
 import sys
 import math
@@ -50,7 +50,8 @@ with tf.device('/gpu:0'):
     noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
     noteEncode = SoftAttentionBlock(noteEncode, segLen)
     noteEncode = BatchNormalization()(noteEncode)
-    noteEncode = LSTM(hidden_note, return_sequences=False, dropout=drop_rate)(noteEncode)
+    noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
+    noteEncode = Attention()(noteEncode)
 
 with tf.device('/gpu:1'):
     deltaInput = Input(shape=(segLen, maxdelta))
@@ -62,7 +63,8 @@ with tf.device('/gpu:1'):
     deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
     deltaEncode = SoftAttentionBlock(deltaEncode, segLen)
     deltaEncode = BatchNormalization()(deltaEncode)
-    deltaEncode = LSTM(hidden_delta, return_sequences=False, dropout=drop_rate)(deltaEncode)
+    deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
+    deltaEncode = Attention()(deltaEncode)
 
 with tf.device('/gpu:2'):
     instInput = Input(shape=(segLen, maxinst))
@@ -75,7 +77,8 @@ with tf.device('/gpu:2'):
     instEncode   = LSTM(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
     instEncode   = SoftAttentionBlock(instEncode, segLen)
     instEncode   = BatchNormalization()(instEncode)
-    instEncode   = LSTM(hidden_inst, return_sequences=False, dropout=drop_rate)(instEncode)
+    instEncode   = LSTM(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
+    instEncode   = Attention()(instEncode)
 
 with tf.device('/gpu:3'):
     codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
