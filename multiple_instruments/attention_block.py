@@ -19,7 +19,6 @@ def SoftAttentionBlock(inputs, input_ts=None):
     if input_ts is None:
         input_ts = int(inputs.shape[1])
     x = Permute((2,1))(inputs) ## (batch_size, features, time_step)
-    x = BatchNormalization()(x)
     x = Dense(input_ts, activation=SoftAttentionBlockActivation)(x)
     x = Permute((2,1))(x)
     attention = Multiply()([x, inputs])

@@ -225,23 +225,17 @@ def main():
     # network:
     with tf.device('/gpu:0'):
         noteInput  = Input(shape=(segLen, vecLen))
-        noteAcc    = SoftAttentionBlock(noteInput, segLen)
-        noteEncode = BatchNormalization()(noteAcc)
+        noteEncode = SoftAttentionBlock(noteInput, segLen)
         noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
-        noteEncode = BatchNormalization()(noteEncode)
         noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
-        noteEncode = BatchNormalization()(noteEncode)
         noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
         noteEncode = Attention()(noteEncode)
 
     with tf.device('/gpu:1'):
         deltaInput = Input(shape=(segLen, maxdelta))
-        deltaAcc   = SoftAttentionBlock(deltaInput, segLen)
-        deltaEncode = BatchNormalization()(deltaAcc)
+        deltaEncode = SoftAttentionBlock(deltaInput, segLen)
         deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
-        deltaEncode = BatchNormalization()(deltaEncode)
         deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
-        deltaEncode = BatchNormalization()(deltaEncode)
         deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
         deltaEncode = Attention()(deltaEncode)
 
@@ -249,11 +243,8 @@ def main():
         instInput = Input(shape=(segLen, maxinst))
         instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu')(instInput)
         instEncode   = SoftAttentionBlock(instEncode, segLen)
-        instEncode   = BatchNormalization()(instEncode)
         instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
-        instEncode   = BatchNormalization()(instEncode)
         instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
-        instEncode   = BatchNormalization()(instEncode)
         instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
         instEncode   = Attention()(instEncode)
 
