@@ -6,7 +6,7 @@ config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
-from keras.layers import LSTM, BatchNormalization, RepeatVector, TimeDistributed
+from keras.layers import GRU, BatchNormalization, RepeatVector, TimeDistributed
 from keras.layers.merge import concatenate
 from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
@@ -37,33 +37,29 @@ drop_rate=0.2 ## for powerful computer
 
 K.set_floatx(compute_precision);
 
-# build the model: stacked LSTMs
+# build the model: stacked GRUs
 print('Build model...')
 # network:
 with tf.device('/gpu:0'):
     noteInput  = Input(shape=(segLen, vecLen))
     noteAcc    = SoftAttentionBlock(noteInput, segLen)
     noteEncode = BatchNormalization()(noteAcc)
-    noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
-    noteEncode = SoftAttentionBlock(noteEncode, segLen)
+    noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
     noteEncode = BatchNormalization()(noteEncode)
-    noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
-    noteEncode = SoftAttentionBlock(noteEncode, segLen)
+    noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
     noteEncode = BatchNormalization()(noteEncode)
-    noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
+    noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
     noteEncode = Attention()(noteEncode)
 
 with tf.device('/gpu:1'):
     deltaInput = Input(shape=(segLen, maxdelta))
     deltaAcc   = SoftAttentionBlock(deltaInput, segLen)
     deltaEncode = BatchNormalization()(deltaAcc)
-    deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
-    deltaEncode = SoftAttentionBlock(deltaEncode, segLen)
+    deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
     deltaEncode = BatchNormalization()(deltaEncode)
-    deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
-    deltaEncode = SoftAttentionBlock(deltaEncode, segLen)
+    deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
     deltaEncode = BatchNormalization()(deltaEncode)
-    deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
+    deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
     deltaEncode = Attention()(deltaEncode)
 
 with tf.device('/gpu:2'):
@@ -71,13 +67,11 @@ with tf.device('/gpu:2'):
     instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu')(instInput)
     instEncode   = SoftAttentionBlock(instEncode, segLen)
     instEncode   = BatchNormalization()(instEncode)
-    instEncode   = LSTM(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
-    instEncode   = SoftAttentionBlock(instEncode, segLen)
+    instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
     instEncode   = BatchNormalization()(instEncode)
-    instEncode   = LSTM(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
-    instEncode   = SoftAttentionBlock(instEncode, segLen)
+    instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
     instEncode   = BatchNormalization()(instEncode)
-    instEncode   = LSTM(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
+    instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
     instEncode   = Attention()(instEncode)
 
 with tf.device('/gpu:3'):
