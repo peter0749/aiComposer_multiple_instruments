@@ -225,19 +225,17 @@ def main():
     # network:
     with tf.device('/gpu:0'):
         noteInput  = Input(shape=(segLen, vecLen))
-        noteEncode = SoftAttentionBlock(noteInput, segLen)
+        noteEncode = SoftAttentionBlock(noteInput, segLen, vecLen)
         noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
         noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
-        noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
-        noteEncode = Attention()(noteEncode)
+        noteEncode = GRU(hidden_note, return_sequences=False, dropout=drop_rate)(noteEncode)
 
     with tf.device('/gpu:1'):
         deltaInput = Input(shape=(segLen, maxdelta))
-        deltaEncode = SoftAttentionBlock(deltaInput, segLen)
+        deltaEncode = SoftAttentionBlock(deltaInput, segLen, maxdelta)
         deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
         deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
-        deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
-        deltaEncode = Attention()(deltaEncode)
+        deltaEncode = GRU(hidden_delta, return_sequences=False, dropout=drop_rate)(deltaEncode)
 
     with tf.device('/gpu:2'):
         instInput = Input(shape=(segLen, maxinst))
@@ -245,8 +243,7 @@ def main():
         instEncode   = SoftAttentionBlock(instEncode, segLen)
         instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
         instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
-        instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
-        instEncode   = Attention()(instEncode)
+        instEncode   = GRU(hidden_inst, return_sequences=False, dropout=drop_rate)(instEncode)
 
     with tf.device('/gpu:3'):
         codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
