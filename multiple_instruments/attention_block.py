@@ -18,6 +18,7 @@ def SoftAttentionBlock(inputs, input_ts=None, input_dim=None, SINGLE_ATTENTION_V
         input_dim = int(inputs.shape[2])
     x = Permute((2,1))(inputs) ## (batch_size, features, time_step)
     x = Reshape((input_dim, input_ts))(x)
+    x = BatchNormalization()(x)
     x = Dense(input_ts, activation='softmax')(x)
     if SINGLE_ATTENTION_VECTOR:
         x = Lambda(lambda x: K.mean(x, axis=1))(x)
