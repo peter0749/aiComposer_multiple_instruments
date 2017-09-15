@@ -12,7 +12,7 @@ from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
 from keras import backend as K
-from attention_block import SoftAttentionBlock, Attention
+from attention_block import SoftAttentionBlock
 import numpy as np
 import midi
 import random
