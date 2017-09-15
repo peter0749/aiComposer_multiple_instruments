@@ -10,16 +10,12 @@ The idea of SoftAttentionBlock* are from:
 https://github.com/philipperemy/keras-attention-mechanism
 '''
 
-def SoftAttentionBlockActivation(x):
-    return K.softmax(K.tanh(x))
-    ## Different from original implementation on "https://github.com/philipperemy/keras-attention-mechanism"
-
 def SoftAttentionBlock(inputs, input_ts=None):
     ## input: (batch_size, time_step, features)
     if input_ts is None:
         input_ts = int(inputs.shape[1])
     x = Permute((2,1))(inputs) ## (batch_size, features, time_step)
-    x = Dense(input_ts, activation=SoftAttentionBlockActivation)(x)
+    x = Dense(input_ts, activation='softmax')(x)
     x = Permute((2,1))(x)
     attention = Multiply()([x, inputs])
     return attention
