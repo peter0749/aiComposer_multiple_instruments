@@ -58,7 +58,7 @@ with tf.device('/gpu:2'):
 
 with tf.device('/gpu:3'):
     codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
-    codec = SoftAttentionBlock(codec, segLen, 384, True)
+    codec = SoftAttentionBlock(codec, segLen, 384)
     codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign')(codec)
     codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign')(codec)
     codec = Dropout(drop_rate)(codec)
