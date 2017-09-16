@@ -226,24 +226,24 @@ def main():
     with tf.device('/gpu:0'):
         noteInput  = Input(shape=(segLen, vecLen))
         noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteInput)
-        noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
+        noteEncode = GRU(128, return_sequences=True, dropout=drop_rate)(noteEncode)
 
     with tf.device('/gpu:1'):
         deltaInput = Input(shape=(segLen, maxdelta))
         deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaInput)
-        deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
+        deltaEncode = GRU(128, return_sequences=True, dropout=drop_rate)(deltaEncode)
 
     with tf.device('/gpu:2'):
         instInput = Input(shape=(segLen, maxinst))
         instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu')(instInput)
         instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
-        instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
+        instEncode   = GRU(128, return_sequences=True, dropout=drop_rate)(instEncode)
 
     with tf.device('/gpu:3'):
         codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
-        codec = SoftAttentionBlock(codec, segLen, hidden_note+hidden_delta+hidden_inst, True)
-        codec = LSTM(hidden_note+hidden_delta+hidden_inst, return_sequences=True, dropout=drop_rate, activation='softsign')(codec)
-        codec = LSTM(384, return_sequences=False, dropout=drop_rate, activation='softsign')(codec)
+        codec = SoftAttentionBlock(codec, segLen, 384, True)
+        codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign')(codec)
+        codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign')(codec)
         codec = Dropout(drop_rate)(codec)
 
         fc_notes = BatchNormalization()(codec)
