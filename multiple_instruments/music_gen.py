@@ -9,7 +9,7 @@ import math
 import h5py
 import os.path
 
-segLen=128
+segLen=48
 vecLen=88 #[0, 87]
 maxdelta=128
 maxpower=64

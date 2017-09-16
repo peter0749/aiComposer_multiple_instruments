@@ -22,7 +22,7 @@ import os.path
 compute_precision='float32'
 learning_rate = 0.002
 epochs = 1
-segLen=128
+segLen=48
 vecLen=88
 maxdelta=128
 maxinst=129
