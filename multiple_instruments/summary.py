@@ -60,7 +60,7 @@ with tf.device('/gpu:3'):
     codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
     codec = SoftAttentionBlock(codec, segLen, hidden_note+hidden_delta+hidden_inst, True)
     codec = LSTM(hidden_note+hidden_delta+hidden_inst, return_sequences=True, dropout=drop_rate, activation='softsign')(codec)
-    codec = LSTM(hidden_note+hidden_delta+hidden_inst, return_sequences=False, dropout=drop_rate, activation='softsign')(codec)
+    codec = LSTM(384, return_sequences=False, dropout=drop_rate, activation='softsign')(codec)
     codec = Dropout(drop_rate)(codec)
 
     fc_notes = BatchNormalization()(codec)
