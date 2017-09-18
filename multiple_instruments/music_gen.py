@@ -74,7 +74,6 @@ def main():
         ## note alignment:
         lastNote = note
         if isinstance(track[inst][-1], midi.NoteOnEvent):
-            print('foo')
             lastNote = track[inst][-1].data[0]-21
         while diff>127:
             track[inst].append(midi.NoteOnEvent(tick=127, data=[ int(lastNote+21), 0]))
