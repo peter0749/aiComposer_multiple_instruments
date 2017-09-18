@@ -61,20 +61,30 @@ def main():
         deltas[0, segLen-1, delta]=1 ## set predicted event
         insts[0, segLen-1, :]=0
         insts[0, segLen-1, inst]=1
-        tickAccum += delta
         ch = 9 if inst==128 else 1
         inst_code = 0 if inst==128 else inst
         if last[inst]==-1:
             track[inst].append(midi.ProgramChangeEvent(tick=0, data=[inst_code], channel=ch))
             last[inst]=0
-        diff = int(tickAccum - last[inst])
+        diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
         power = (pred_power[0]+1)*2
         power = 127 if power>127 else power
         power = 1 if power<1 else power
+
+        ## note alignment:
+        lastNote = note
+        if isinstance(track[inst][-1], midi.NoteOnEvent):
+            print('foo')
+            lastNote = track[inst][-1].data[0]-21
         while diff>127:
-            track[inst].append(midi.NoteOnEvent(tick=127, data=[ int(note+21), int(power)]))
+            track[inst].append(midi.NoteOnEvent(tick=127, data=[ int(lastNote+21), 0]))
             diff-=127
-        track[inst].append(midi.NoteOnEvent(tick=diff, data=[ int(note+21), int(power)]))
+        if diff>0:
+            track[inst].append(midi.NoteOnEvent(tick=diff, data=[ int(lastNote+21), 0]))
+
+        ## note on:
+        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+21), int(power)]))
+        tickAccum += delta
         last[inst] = tickAccum
         print('processed: ', i+1, '/', noteNum)
     for i in xrange(maxinst):
