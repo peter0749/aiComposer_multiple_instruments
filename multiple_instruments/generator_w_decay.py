@@ -53,7 +53,7 @@ def main():
     for i in xrange(noteNum):
         pred_note, pred_time, pred_inst, pred_power = model.predict([notes, deltas, insts], batch_size=1, verbose=0)
         inst = int(sample(pred_inst[0], temperature_inst))
-        for t in reversed(range(max(1, len(track[inst])-decay_range), len(track[inst]))):
+        for t in range(max(1, len(track[inst])-decay_range), len(track[inst])):
             if not isinstance(track[inst][t], midi.NoteOnEvent):
                 continue
             pred_note[0][track[inst][t].data[0]-21] *= rate
