@@ -72,14 +72,11 @@ def main():
         power = 1 if power<1 else power
 
         ## note alignment:
-        lastNote = note
-        if isinstance(track[inst][-1], midi.NoteOnEvent):
-            lastNote = track[inst][-1].data[0]-21
         while diff>127:
-            track[inst].append(midi.NoteOnEvent(tick=127, data=[ int(lastNote+21), 0]))
+            track[inst].append(midi.ControlChangeEvent(tick=127, channel=ch, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
             diff-=127
         if diff>0:
-            track[inst].append(midi.NoteOnEvent(tick=diff, data=[ int(lastNote+21), 0]))
+            track[inst].append(midi.ControlChangeEvent(tick=diff, channel=ch, data=[3, 0])) ## append 'foo' event
 
         ## note on:
         track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+21), int(power)]))
