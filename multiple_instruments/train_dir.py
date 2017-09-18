@@ -20,18 +20,38 @@ import sys
 import math
 import h5py
 import os.path
+import argparse
+
+parser = argparse.ArgumentParser(description='Music Generation with Mutiple Instruments (training)')
+parser.add_argument('train_dir', metavar='training', type=str,
+                    help='Path to the training set.')
+parser.add_argument('valid_dir', metavar='validation', type=str,
+                    help='Path to the validation set.')
+parser.add_argument('--batch_size', type=int, default=128, required=False,
+                    help='Number of samples per iteration.')
+parser.add_argument('--epochs', type=int, default=128, required=False,
+                    help='Just a number of epochs')
+parser.add_argument('--sample_per_epoch', type=int, default=128, required=False,
+                    help='Number of batchs every iteration.')
+parser.add_argument('--lr', type=float, default=0.0001, required=False,
+                    help='Learning rate.')
+parser.add_argument('--no_drum', action='store_true', default=False,
+                    help='No drums.')
+
+args = parser.parse_args()
 
 compute_precision='float32'
-learning_rate = 0.0002
-epochs = int(sys.argv[4])
-samples_per_epoch = int(sys.argv[5])
+learning_rate = args.lr
+epochs = args.epochs
+samples_per_epoch = args.sample_per_epoch
+no_drum = args.no_drum
 step_size=1
 segLen=48
 vecLen=88
 maxdelta=128
 maxinst=129
 maxpower=64
-batch_size = int(sys.argv[3])
+batch_size = args.batch_size
 hidden_delta=256
 hidden_note=256
 hidden_inst=256
@@ -93,6 +113,8 @@ def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
                 power = 64 if power>64 else power
                 power = 1 if power<1 else power
                 power -= 1 ## [0, 63]
+                if instrument == 128 and no_drum:
+                    continue
                 temp.append((accumTick, note, instrument, power))
         temp = temp[1:-1]
         data.extend(temp)
@@ -142,13 +164,19 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
         temp = temp[1:-1]
         data.extend(temp)
     data = list(set(data)) ## remove duplicate data
+    temp = []
     for i in xrange(len(data)): ## channel -> instrument
         acc = data[i][0]
         note= data[i][1]
         ch  = data[i][2]
         power=data[i][3]
         inst=ch2ins[ch]
-        data[i] = (acc,note,inst,power)
+        if inst==128 and no_drum:
+            continue
+        temp.append((acc,note,inst,power))
+        #data[i] = (acc,note,inst,power)
+    data = temp
+    temp = None
     data.sort() ## for better quality
     data = purge(data)
     for i in range(0, len(data)-1):
@@ -278,7 +306,7 @@ def main():
                              'power_output':1e-3
                            },
             optimizer=optimizer, metrics=['accuracy'])
-    aiComposer.fit_generator(generator(str(sys.argv[1]), step_size, batch_size), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(str(sys.argv[2]), step_size, batch_size), validation_steps=10, callbacks=[checkPoint, Logs])
+    aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size), validation_steps=10, callbacks=[checkPoint, Logs])
     aiComposer.save('./multi.h5')
 
 if __name__ == "__main__":

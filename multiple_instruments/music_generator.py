@@ -24,6 +24,8 @@ parser.add_argument('--inst_temp', type=float, default=0.7, required=False,
                     help='Temperture of instruments.')
 parser.add_argument('--finger_number', type=int, default=5, required=False,
                     help='Maximum number of notes play at the same time.')
+parser.add_argument('--no_drum', action='store_true', default=False,
+                    help='No drums.')
 
 args = parser.parse_args()
 tar_midi = args.output_midi_path
@@ -32,6 +34,7 @@ temperature_note = args.note_temp
 temperature_delta = args.delta_temp
 temperature_inst = args.inst_temp
 finger_limit = args.finger_number
+no_drum = args.no_drum
 
 segLen=48
 vecLen=88 #[0, 87]
@@ -67,6 +70,8 @@ def main():
     for i in xrange(noteNum):
         pred_note, pred_time, pred_inst, pred_power = model.predict([notes, deltas, insts], batch_size=1, verbose=0)
         note = int(sample(pred_note[0], temperature_note))
+        if no_drum:
+            pred_inst[0][128] = 1e-100
         inst = int(sample(pred_inst[0], temperature_inst))
         zs = 1 ## how many notes play at the same time? self += 1
         for t in reversed(range(len(track[inst]))): ## this limits # of notes play at the same time
