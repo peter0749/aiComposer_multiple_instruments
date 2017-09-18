@@ -8,6 +8,30 @@ import midi
 import math
 import h5py
 import os.path
+import argparse
+
+parser = argparse.ArgumentParser(description='Music Generation with Mutiple Instruments')
+
+parser.add_argument('output_midi_path', metavar='midi', type=str,
+                    help='Path to the output midi file.')
+parser.add_argument('--n', type=int, default=120, required=False,
+                    help='Number of notes to generate.')
+parser.add_argument('--note_temp', type=float, default=0.7, required=False,
+                    help='Temperture of notes.')
+parser.add_argument('--delta_temp', type=float, default=0.7, required=False,
+                    help='Temperture of time.')
+parser.add_argument('--inst_temp', type=float, default=0.7, required=False,
+                    help='Temperture of instruments.')
+parser.add_argument('--finger_number', type=int, default=5, required=False,
+                    help='Maximum number of notes play at the same time.')
+
+args = parser.parse_args()
+tar_midi = args.output_midi_path
+noteNum  = args.n
+temperature_note = args.note_temp
+temperature_delta = args.delta_temp
+temperature_inst = args.inst_temp
+finger_limit = args.finger_number
 
 segLen=48
 vecLen=88 #[0, 87]
@@ -28,17 +52,7 @@ def sample(preds, temperature=1.0):
 
 def main():
     global segLen, vecLen
-    if len(sys.argv)<6:
-        return
     model = load_model('./multi.h5')
-    tar_midi = str(sys.argv[1])
-    noteNum = int(sys.argv[2])
-    temperature_note = float(sys.argv[3])
-    temperature_delta = float(sys.argv[4])
-    temperature_inst = float(sys.argv[5])
-    finger_limit = 5
-    if len(sys.argv)>6:
-        finger_limit = max(1, int(sys.argv[6]))
     output = midi.Pattern(resolution=256)
     track = [midi.Track() for _ in xrange(maxinst)]
     for i in xrange(maxinst):
