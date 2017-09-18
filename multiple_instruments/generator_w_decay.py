@@ -1,0 +1,100 @@
+from __future__ import print_function
+import keras
+from keras.models import Sequential, load_model
+import numpy as np
+import random
+import sys
+import midi
+import math
+import h5py
+import os.path
+
+segLen=48
+vecLen=88 #[0, 87]
+maxdelta=128
+maxpower=64
+maxinst =129
+
+def sample(preds, temperature=1.0):
+    if temperature < 1e-9:
+        return np.argmax(preds)
+    preds = np.asarray(preds).astype('float64')
+    preds = np.log(preds) / temperature
+    exp_preds = np.exp(preds)
+    preds = exp_preds / np.sum(exp_preds)
+    probas = np.random.multinomial(1, preds, 1)
+    res = np.argmax(probas)
+    return res
+
+def main():
+    global segLen, vecLen
+    if(len(sys.argv)<9):
+        return
+    model = load_model('./multi.h5')
+    tar_midi = str(sys.argv[1])
+    noteNum = int(sys.argv[2])
+    temperature_note = float(sys.argv[3])
+    temperature_delta = float(sys.argv[4])
+    temperature_inst = float(sys.argv[5])
+    rate = float(sys.argv[6])
+    decay= float(sys.argv[7])
+    decay_range = int(sys.argv[8])
+    output = midi.Pattern(resolution=256)
+    track = [midi.Track() for _ in xrange(maxinst)]
+    for i in xrange(maxinst):
+        output.append(track[i])
+    notes = np.zeros((1, segLen, vecLen))
+    deltas = np.zeros((1, segLen, maxdelta))
+    insts = np.zeros((1, segLen, maxinst))
+    last = np.zeros(maxinst)
+    for _ in xrange(maxinst):
+        last[_] = -1
+    tickAccum = 0
+    for i in xrange(noteNum):
+        pred_note, pred_time, pred_inst, pred_power = model.predict([notes, deltas, insts], batch_size=1, verbose=0)
+        inst = int(sample(pred_inst[0], temperature_inst))
+        for t in reversed(range(max(1, len(track[inst])-decay_range), len(track[inst]))):
+            if not isinstance(track[inst][t], midi.NoteOnEvent):
+                continue
+            pred_note[0][track[inst][t].data[0]-21] *= rate
+            pred_time[0][track[inst][t].tick] *= rate
+            rate *= decay
+        note = int(sample(pred_note[0], temperature_note))
+        delta = int(sample(pred_time[0], temperature_delta))
+        notes = np.roll(notes, -1, axis=1)
+        deltas = np.roll(deltas, -1, axis=1)
+        insts = np.roll(insts, -1, axis=1)
+        notes[0, segLen-1, :]=0 ## reset last event
+        notes[0, segLen-1, note]=1 ## set predicted event
+        deltas[0, segLen-1, :]=0 ## reset last event
+        deltas[0, segLen-1, delta]=1 ## set predicted event
+        insts[0, segLen-1, :]=0
+        insts[0, segLen-1, inst]=1
+        ch = 9 if inst==128 else 1
+        inst_code = 0 if inst==128 else inst
+        if last[inst]==-1:
+            track[inst].append(midi.ProgramChangeEvent(tick=0, data=[inst_code], channel=ch))
+            last[inst]=0
+        diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
+        power = (pred_power[0]+1)*2
+        power = 127 if power>127 else power
+        power = 1 if power<1 else power
+
+        ## note alignment:
+        while diff>127:
+            track[inst].append(midi.ControlChangeEvent(tick=127, channel=ch, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
+            diff-=127
+        if diff>0:
+            track[inst].append(midi.ControlChangeEvent(tick=diff, channel=ch, data=[3, 0])) ## append 'foo' event
+
+        ## note on:
+        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+21), int(power)]))
+        tickAccum += delta
+        last[inst] = tickAccum
+        print('processed: ', i+1, '/', noteNum)
+    for i in xrange(maxinst):
+        track[i].append( midi.EndOfTrackEvent(tick=1) )
+    midi.write_midifile(tar_midi, output)
+
+if __name__ == "__main__":
+    main()
