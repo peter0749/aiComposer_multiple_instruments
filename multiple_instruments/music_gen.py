@@ -28,7 +28,7 @@ def sample(preds, temperature=1.0):
 
 def main():
     global segLen, vecLen
-    if(len(sys.argv)<6):
+    if len(sys.argv)<6:
         return
     model = load_model('./multi.h5')
     tar_midi = str(sys.argv[1])
@@ -36,6 +36,9 @@ def main():
     temperature_note = float(sys.argv[3])
     temperature_delta = float(sys.argv[4])
     temperature_inst = float(sys.argv[5])
+    finger_limit = 5
+    if len(sys.argv)>6:
+        finger_limit = max(1, int(sys.argv[6]))
     output = midi.Pattern(resolution=256)
     track = [midi.Track() for _ in xrange(maxinst)]
     for i in xrange(maxinst):
@@ -50,8 +53,17 @@ def main():
     for i in xrange(noteNum):
         pred_note, pred_time, pred_inst, pred_power = model.predict([notes, deltas, insts], batch_size=1, verbose=0)
         note = int(sample(pred_note[0], temperature_note))
-        delta = int(sample(pred_time[0], temperature_delta))
         inst = int(sample(pred_inst[0], temperature_inst))
+        zs = 1 ## how many notes play at the same time? self += 1
+        for t in reversed(range(len(track[inst]))): ## this limits # of notes play at the same time
+            if hasattr(track[inst][t], 'tick'):
+                if track[inst][t].tick==0:
+                    zs += 1 ## others
+                else:
+                    break
+        if zs>=finger_limit: ## no more fingers
+            pred_time[0][0] = 1e-100
+        delta = int(sample(pred_time[0], temperature_delta))
         notes = np.roll(notes, -1, axis=1)
         deltas = np.roll(deltas, -1, axis=1)
         insts = np.roll(insts, -1, axis=1)
