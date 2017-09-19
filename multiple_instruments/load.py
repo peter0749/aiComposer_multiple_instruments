@@ -61,21 +61,21 @@ with tf.device('/gpu:3'):
     codec = SoftAttentionBlock(codec, segLen, 384)
     codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign')(codec)
     codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign')(codec)
-    codec = Dropout(drop_rate)(codec)
+    encoded = Dropout(drop_rate)(codec)
+    fc_inst = BatchNormalization()(encoded)
+    pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output')(fc_inst) ## output PMF
+    pred_inst_reduce = Dense(3, kernel_initializer='normal')(pred_inst)
+    arg_feature   = concatenate([encoded, pred_inst_reduce], axis=-1)
 
-    fc_notes = BatchNormalization()(codec)
+    fc_notes = BatchNormalization()(arg_feature)
     pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output')(fc_notes) ## output PMF
 
-    fc_delta = BatchNormalization()(codec)
+    fc_delta = BatchNormalization()(arg_feature)
     pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output')(fc_delta) ## output PMF
 
-    fc_inst = BatchNormalization()(codec)
-    pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output')(fc_inst) ## output PMF
-
-    fc_power = BatchNormalization()(codec)
+    fc_power = BatchNormalization()(arg_feature)
     pred_power = Dense(1, kernel_initializer='normal', activation='relu', name='power_output')(fc_power) ## output regression >= 0
 aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, pred_inst, pred_power])
 if ( os.path.isfile('./top_weight.h5')):  ## fine-tuning
     aiComposer.load_weights('./top_weight.h5')
 aiComposer.save('./multi.h5')
-

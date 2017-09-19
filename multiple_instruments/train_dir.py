@@ -272,38 +272,39 @@ def main():
     # network:
     with tf.device('/gpu:0'):
         noteInput  = Input(shape=(segLen, vecLen))
-        noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteInput)
-        noteEncode = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteEncode)
+        noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteInput)
+        noteEncode = GRU(128, return_sequences=True, dropout=drop_rate)(noteEncode)
 
     with tf.device('/gpu:1'):
         deltaInput = Input(shape=(segLen, maxdelta))
-        deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaInput)
-        deltaEncode = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaEncode)
+        deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaInput)
+        deltaEncode = GRU(128, return_sequences=True, dropout=drop_rate)(deltaEncode)
 
     with tf.device('/gpu:2'):
         instInput = Input(shape=(segLen, maxinst))
-        instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu', trainable=train_inst)(instInput)
-        instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instEncode)
-        instEncode   = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instEncode)
+        instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu')(instInput)
+        instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
+        instEncode   = GRU(128, return_sequences=True, dropout=drop_rate)(instEncode)
 
     with tf.device('/gpu:3'):
         codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
-        codec = SoftAttentionBlock(codec, segLen, 384, trainable=train_att)
-        codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
-        codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
-        codec = Dropout(drop_rate)(codec)
+        codec = SoftAttentionBlock(codec, segLen, 384)
+        codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign')(codec)
+        codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign')(codec)
+        encoded = Dropout(drop_rate)(codec)
+        fc_inst = BatchNormalization()(encoded)
+        pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output')(fc_inst) ## output PMF
+        pred_inst_reduce = Dense(3, kernel_initializer='normal')(pred_inst)
+        arg_feature   = concatenate([encoded, pred_inst_reduce], axis=-1)
 
-        fc_notes = BatchNormalization(trainable=train_note)(codec)
-        pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output', trainable=train_note)(fc_notes) ## output PMF
+        fc_notes = BatchNormalization()(arg_feature)
+        pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output')(fc_notes) ## output PMF
 
-        fc_delta = BatchNormalization(trainable=train_delta)(codec)
-        pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output', trainable=train_delta)(fc_delta) ## output PMF
+        fc_delta = BatchNormalization()(arg_feature)
+        pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output')(fc_delta) ## output PMF
 
-        fc_inst = BatchNormalization(trainable=train_inst)(codec)
-        pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output', trainable=train_inst)(fc_inst) ## output PMF
-
-        fc_power = BatchNormalization(trainable=train_power)(codec)
-        pred_power = Dense(1, kernel_initializer='normal', activation='relu', name='power_output', trainable=train_power)(fc_power) ## output regression >= 0
+        fc_power = BatchNormalization()(arg_feature)
+        pred_power = Dense(1, kernel_initializer='normal', activation='relu', name='power_output')(fc_power) ## output regression >= 0
     aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, pred_inst, pred_power])
     checkPoint = ModelCheckpoint(filepath="weights-{epoch:04d}-{loss:.2f}-{val_loss:.2f}.h5", verbose=1, save_best_only=False, save_weights_only=True, period=3)
     Logs = CSVLogger('logs.csv', separator=',', append=True)
