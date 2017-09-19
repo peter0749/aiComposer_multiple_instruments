@@ -52,12 +52,12 @@ parser.add_argument('--no_update_att', action='store_true', default=False,
 
 args = parser.parse_args()
 
-train_note = !args.no_update_note
-train_delta= !args.no_update_delta
-train_inst = !args.no_update_inst
-train_power= !args.no_update_power
-train_lstm = !args.no_update_lstm
-train_att  = !args.no_update_att
+train_note = not args.no_update_note
+train_delta= not args.no_update_delta
+train_inst = not args.no_update_inst
+train_power= not args.no_update_power
+train_lstm = not args.no_update_lstm
+train_att  = not args.no_update_att
 
 compute_precision='float32'
 learning_rate = args.lr
