@@ -344,7 +344,7 @@ def main():
     if epochs_inst>0:
         for i in xrange(len(instClass.layers)):
             instClass.layers[i].set_weights(aiComposer.layers[i].get_weights())
-        instClass.fit_generator(generator(args.train_dir, step_size, batch_size, True), steps_per_epoch=samples_per_epoch, epochs=epochs_inst, validation_data=generator(args.valid_dir, step_size, batch_size, True), validation_steps=10, callbacks=[checkPoint, Logs]) ## fine tune instrument classifier
+        instClass.fit_generator(generator(args.train_dir, step_size, batch_size, True), steps_per_epoch=samples_per_epoch, epochs=epochs_inst, validation_data=generator(args.valid_dir, step_size, batch_size, True), validation_steps=5) ## fine tune instrument classifier
         for i in xrange(len(instClass.layers)):
             aiComposer.layers[i].set_weights(instClass.layers[i].get_weights()) ## write back updated weights to main model
     aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, False), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, False), validation_steps=10, callbacks=[checkPoint, Logs])
