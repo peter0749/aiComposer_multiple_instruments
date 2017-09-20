@@ -32,7 +32,7 @@ parser.add_argument('--batch_size', type=int, default=128, required=False,
 parser.add_argument('--epochs_inst', type=int, default=0, required=False,
                     help='Just a number of epochs. (train instrument predictor only)')
 parser.add_argument('--epochs', type=int, default=128, required=False,
-                    help='Just a number of epochs')
+                    help='Just a number of epochs. (will not train instrument classifier weights)')
 parser.add_argument('--sample_per_epoch', type=int, default=128, required=False,
                     help='Number of batchs every iteration.')
 parser.add_argument('--lr', type=float, default=0.0001, required=False,
@@ -279,6 +279,13 @@ def main():
     # build the model: stacked GRUs
     print('Build model...')
     # network:
+    inst_lname = [
+                    'inst_conv',
+                    'inst_gru1',
+                    'inst_gru2',
+                    'inst_bn',
+                    'inst_output'
+                 ]
     with tf.device('/gpu:0'):
         noteInput  = Input(shape=(segLen, vecLen))
         noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteInput)
@@ -291,9 +298,9 @@ def main():
 
     with tf.device('/gpu:2'):
         instInput = Input(shape=(segLen, maxinst))
-        instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu', trainable=train_inst)(instInput)
-        instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instEncode)
-        instEncode   = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instEncode)
+        instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu', trainable=train_inst, name=inst_lname[0])(instInput)
+        instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate, trainable=train_inst, name=inst_lname[1])(instEncode)
+        instEncode   = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_inst, name=inst_lname[2])(instEncode)
 
     with tf.device('/gpu:3'):
         codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
@@ -301,9 +308,9 @@ def main():
         codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
         codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
         encoded = Dropout(drop_rate)(codec)
-        fc_inst = BatchNormalization(trainable=train_inst)(encoded)
-        pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output', trainable=train_inst)(fc_inst) ## output PMF
-        pred_inst_reduce = Dense(3, kernel_initializer='normal', trainable=train_inst)(pred_inst)
+        fc_inst = BatchNormalization(trainable=train_inst, name=inst_lname[3])(encoded)
+        pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name=inst_lname[4], trainable=train_inst)(fc_inst) ## output PMF
+        pred_inst_reduce = Dense(3, kernel_initializer='normal', trainable=train_inst)(pred_inst) ## encoder
         arg_feature   = concatenate([encoded, pred_inst_reduce], axis=-1)
 
         fc_notes = BatchNormalization(trainable=train_note)(arg_feature)
@@ -347,6 +354,10 @@ def main():
         instClass.fit_generator(generator(args.train_dir, step_size, batch_size, True), steps_per_epoch=samples_per_epoch, epochs=epochs_inst, validation_data=generator(args.valid_dir, step_size, batch_size, True), validation_steps=5) ## fine tune instrument classifier
         for i in xrange(len(instClass.layers)):
             aiComposer.layers[i].set_weights(instClass.layers[i].get_weights()) ## write back updated weights to main model
+    for layer in aiComposer.layers: ## not train instrument classifier
+        for not_trainable_layer_name in inst_lname:
+            if layer.name == not_trainable_layer_name:
+                layer.trainable = False
     aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, False), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, False), validation_steps=10, callbacks=[checkPoint, Logs])
     aiComposer.save('./multi.h5')
 
