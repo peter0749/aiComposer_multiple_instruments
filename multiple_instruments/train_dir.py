@@ -29,8 +29,10 @@ parser.add_argument('valid_dir', metavar='validation', type=str,
                     help='Path to the validation set.')
 parser.add_argument('--batch_size', type=int, default=128, required=False,
                     help='Number of samples per iteration.')
+parser.add_argument('--epochs_inst', type=int, default=0, required=False,
+                    help='Just a number of epochs. (train instrument predictor only)')
 parser.add_argument('--epochs', type=int, default=128, required=False,
-                    help='Just a number of epochs')
+                    help='Just a number of epochs. (will not train instrument classifier weights)')
 parser.add_argument('--sample_per_epoch', type=int, default=128, required=False,
                     help='Number of batchs every iteration.')
 parser.add_argument('--lr', type=float, default=0.0001, required=False,
@@ -62,6 +64,7 @@ train_att  = not args.no_update_att
 compute_precision='float32'
 learning_rate = args.lr
 epochs = args.epochs
+epochs_inst = args.epochs_inst
 samples_per_epoch = args.sample_per_epoch
 no_drum = args.no_drum
 step_size=1
@@ -239,7 +242,7 @@ def seg2vec(segment, nextseg, segLen, vecLen, maxdelta, maxinst):
         powers_n[i,0] = int(nextseg[i][3])
     return notes, times, insts, powers, notes_n, times_n, insts_n, powers_n
 
-def generator(path_name, step_size, batch_size):
+def generator(path_name, step_size, batch_size, inst_only=False):
     while True:
         randomFile = os.listdir(str(path_name))
         random.shuffle(randomFile)
@@ -259,17 +262,30 @@ def generator(path_name, step_size, batch_size):
                 continue
             for i in xrange(0, len(note)-batch_size, batch_size):
                 idx = range(i, i+batch_size)
-                yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx],n_power[idx]])
+                if inst_only:
+                    yield ([note[idx],time[idx],inst[idx]], [n_inst[idx]])
+                else:
+                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx],n_power[idx]])
             l = len(note)%batch_size
             if l > 0:
                 idx = range(len(note)-l,len(note))
-                yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx],n_power[idx]])
+                if inst_only:
+                    yield ([note[idx],time[idx],inst[idx]], [n_inst[idx]])
+                else:
+                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx],n_power[idx]])
 
 def main():
     # network:
     # build the model: stacked GRUs
     print('Build model...')
     # network:
+    inst_lname = [
+                    'inst_conv',
+                    'inst_gru1',
+                    'inst_gru2',
+                    'inst_bn',
+                    'inst_output'
+                 ]
     with tf.device('/gpu:0'):
         noteInput  = Input(shape=(segLen, vecLen))
         noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteInput)
@@ -282,29 +298,31 @@ def main():
 
     with tf.device('/gpu:2'):
         instInput = Input(shape=(segLen, maxinst))
-        instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu', trainable=train_inst)(instInput)
-        instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instEncode)
-        instEncode   = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instEncode)
+        instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu', trainable=train_inst, name=inst_lname[0])(instInput)
+        instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate, trainable=train_inst, name=inst_lname[1])(instEncode)
+        instEncode   = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_inst, name=inst_lname[2])(instEncode)
 
     with tf.device('/gpu:3'):
         codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
         codec = SoftAttentionBlock(codec, segLen, 384, trainable=train_att)
         codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
         codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
-        codec = Dropout(drop_rate)(codec)
+        encoded = Dropout(drop_rate)(codec)
+        fc_inst = BatchNormalization(trainable=train_inst, name=inst_lname[3])(encoded)
+        pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name=inst_lname[4], trainable=train_inst)(fc_inst) ## output PMF
+        pred_inst_reduce = Dense(3, kernel_initializer='normal', trainable=train_inst)(pred_inst) ## encoder
+        arg_feature   = concatenate([encoded, pred_inst_reduce], axis=-1)
 
-        fc_notes = BatchNormalization(trainable=train_note)(codec)
+        fc_notes = BatchNormalization(trainable=train_note)(arg_feature)
         pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output', trainable=train_note)(fc_notes) ## output PMF
 
-        fc_delta = BatchNormalization(trainable=train_delta)(codec)
+        fc_delta = BatchNormalization(trainable=train_delta)(arg_feature)
         pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output', trainable=train_delta)(fc_delta) ## output PMF
 
-        fc_inst = BatchNormalization(trainable=train_inst)(codec)
-        pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output', trainable=train_inst)(fc_inst) ## output PMF
-
-        fc_power = BatchNormalization(trainable=train_power)(codec)
+        fc_power = BatchNormalization(trainable=train_power)(arg_feature)
         pred_power = Dense(1, kernel_initializer='normal', activation='relu', name='power_output', trainable=train_power)(fc_power) ## output regression >= 0
     aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, pred_inst, pred_power])
+    instClass  = Model([noteInput, deltaInput, instInput], [pred_inst])
     checkPoint = ModelCheckpoint(filepath="weights-{epoch:04d}-{loss:.2f}-{val_loss:.2f}.h5", verbose=1, save_best_only=False, save_weights_only=True, period=3)
     Logs = CSVLogger('logs.csv', separator=',', append=True)
     optimizer = RMSprop(lr=learning_rate, decay=learning_rate/epochs, clipnorm=1.)
@@ -325,7 +343,22 @@ def main():
                              'power_output':1e-3
                            },
             optimizer=optimizer, metrics=['accuracy'])
-    aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size), validation_steps=10, callbacks=[checkPoint, Logs])
+    instClass.compile(
+            loss = {
+                     'inst_output':'categorical_crossentropy'
+                   },
+            optimizer=optimizer, metrics=['accuracy'])
+    if epochs_inst>0:
+        for i in xrange(len(instClass.layers)):
+            instClass.layers[i].set_weights(aiComposer.layers[i].get_weights())
+        instClass.fit_generator(generator(args.train_dir, step_size, batch_size, True), steps_per_epoch=samples_per_epoch, epochs=epochs_inst, validation_data=generator(args.valid_dir, step_size, batch_size, True), validation_steps=5) ## fine tune instrument classifier
+        for i in xrange(len(instClass.layers)):
+            aiComposer.layers[i].set_weights(instClass.layers[i].get_weights()) ## write back updated weights to main model
+    for layer in aiComposer.layers: ## not train instrument classifier
+        for not_trainable_layer_name in inst_lname:
+            if layer.name == not_trainable_layer_name:
+                layer.trainable = False
+    aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, False), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, False), validation_steps=10, callbacks=[checkPoint, Logs])
     aiComposer.save('./multi.h5')
 
 if __name__ == "__main__":
