@@ -29,6 +29,8 @@ parser.add_argument('valid_dir', metavar='validation', type=str,
                     help='Path to the validation set.')
 parser.add_argument('--batch_size', type=int, default=128, required=False,
                     help='Number of samples per iteration.')
+parser.add_argument('--epochs_inst', type=int, default=0, required=False,
+                    help='Just a number of epochs. (train instrument predictor only)')
 parser.add_argument('--epochs', type=int, default=128, required=False,
                     help='Just a number of epochs')
 parser.add_argument('--sample_per_epoch', type=int, default=128, required=False,
@@ -62,6 +64,7 @@ train_att  = not args.no_update_att
 compute_precision='float32'
 learning_rate = args.lr
 epochs = args.epochs
+epochs_inst = args.epochs_inst
 samples_per_epoch = args.sample_per_epoch
 no_drum = args.no_drum
 step_size=1
@@ -239,7 +242,7 @@ def seg2vec(segment, nextseg, segLen, vecLen, maxdelta, maxinst):
         powers_n[i,0] = int(nextseg[i][3])
     return notes, times, insts, powers, notes_n, times_n, insts_n, powers_n
 
-def generator(path_name, step_size, batch_size):
+def generator(path_name, step_size, batch_size, inst_only=False):
     while True:
         randomFile = os.listdir(str(path_name))
         random.shuffle(randomFile)
@@ -259,11 +262,17 @@ def generator(path_name, step_size, batch_size):
                 continue
             for i in xrange(0, len(note)-batch_size, batch_size):
                 idx = range(i, i+batch_size)
-                yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx],n_power[idx]])
+                if inst_only:
+                    yield ([note[idx],time[idx],inst[idx]], [n_inst[idx]])
+                else:
+                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx],n_power[idx]])
             l = len(note)%batch_size
             if l > 0:
                 idx = range(len(note)-l,len(note))
-                yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx],n_power[idx]])
+                if inst_only:
+                    yield ([note[idx],time[idx],inst[idx]], [n_inst[idx]])
+                else:
+                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx],n_power[idx]])
 
 def main():
     # network:
@@ -306,6 +315,7 @@ def main():
         fc_power = BatchNormalization(trainable=train_power)(arg_feature)
         pred_power = Dense(1, kernel_initializer='normal', activation='relu', name='power_output', trainable=train_power)(fc_power) ## output regression >= 0
     aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, pred_inst, pred_power])
+    instClass  = Model([noteInput, deltaInput, instInput], [pred_inst])
     checkPoint = ModelCheckpoint(filepath="weights-{epoch:04d}-{loss:.2f}-{val_loss:.2f}.h5", verbose=1, save_best_only=False, save_weights_only=True, period=3)
     Logs = CSVLogger('logs.csv', separator=',', append=True)
     optimizer = RMSprop(lr=learning_rate, decay=learning_rate/epochs, clipnorm=1.)
@@ -326,7 +336,18 @@ def main():
                              'power_output':1e-3
                            },
             optimizer=optimizer, metrics=['accuracy'])
-    aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size), validation_steps=10, callbacks=[checkPoint, Logs])
+    instClass.compile(
+            loss = {
+                     'inst_output':'categorical_crossentropy'
+                   },
+            optimizer=optimizer, metrics=['accuracy'])
+    if epochs_inst>0:
+        for i in xrange(len(instClass.layers)):
+            instClass.layers[i].set_weights(aiComposer.layers[i].get_weights())
+        instClass.fit_generator(generator(args.train_dir, step_size, batch_size, True), steps_per_epoch=samples_per_epoch, epochs=epochs_inst, validation_data=generator(args.valid_dir, step_size, batch_size, True), validation_steps=10, callbacks=[checkPoint, Logs]) ## fine tune instrument classifier
+        for i in xrange(len(instClass.layers)):
+            aiComposer.layers[i].set_weights(instClass.layers[i].get_weights()) ## write back updated weights to main model
+    aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, False), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, False), validation_steps=10, callbacks=[checkPoint, Logs])
     aiComposer.save('./multi.h5')
 
 if __name__ == "__main__":
