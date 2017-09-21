@@ -69,19 +69,21 @@ def main():
     tickAccum = 0
     for i in xrange(noteNum):
         pred_note, pred_time, pred_inst, pred_power = model.predict([notes, deltas, insts], batch_size=1, verbose=0)
-        note = int(sample(pred_note[0], temperature_note))
         if no_drum:
             pred_inst[0][128] = 1e-100
         inst = int(sample(pred_inst[0], temperature_inst))
         zs = 1 ## how many notes play at the same time? self += 1
         for t in reversed(range(len(track[inst]))): ## this limits # of notes play at the same time
             if hasattr(track[inst][t], 'tick'):
+                if isinstance(track[inst][t], midi.NoteOnEvent):
+                    pred_note[0][track[inst][t].data[0]-21] = 1e-100
                 if track[inst][t].tick==0:
                     zs += 1 ## others
                 else:
                     break
         if zs>=finger_limit: ## no more fingers
             pred_time[0][0] = 1e-100
+        note = int(sample(pred_note[0], temperature_note))
         delta = int(sample(pred_time[0], temperature_delta))
         notes = np.roll(notes, -1, axis=1)
         deltas = np.roll(deltas, -1, axis=1)
