@@ -69,7 +69,7 @@ samples_per_epoch = args.sample_per_epoch
 no_drum = args.no_drum
 step_size=1
 segLen=48
-vecLen=36 ## [43, 78]
+vecLen=48 ## [43, 90]
 maxdelta=32
 maxinst=129
 maxpower=64
@@ -129,7 +129,7 @@ def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
             elif isinstance(v, midi.SetTempoEvent):
                 changeBPM = Tempo2BPM(v)
                 speedRatio = float(changeBPM)/float(Normal)
-            elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=43 and v.data[0]<=78 and v.data[1]>0:
+            elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=43 and v.data[0]<=90 and v.data[1]>0:
                 note = v.data[0]-43
                 power = v.data[1] / 2
                 power = 64 if power>64 else power
@@ -175,7 +175,7 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
             elif isinstance(v, midi.SetTempoEvent):
                 changeBPM = Tempo2BPM(v)
                 speedRatio = float(changeBPM)/float(Normal)
-            elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=43 and v.data[0]<=78 and v.data[1]>0:
+            elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=43 and v.data[0]<=90 and v.data[1]>0:
                 ch = v.channel
                 note = v.data[0]-43
                 power = v.data[1] / 2

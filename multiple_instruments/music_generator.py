@@ -37,7 +37,7 @@ finger_limit = args.finger_number
 no_drum = args.no_drum
 
 segLen=48
-vecLen=36 #[43, 78]
+vecLen=48 #[43, 90]
 maxdelta=32
 maxpower=64
 maxinst =129
