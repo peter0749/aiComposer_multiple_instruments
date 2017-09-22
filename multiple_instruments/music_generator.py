@@ -37,7 +37,7 @@ finger_limit = args.finger_number
 no_drum = args.no_drum
 
 segLen=48
-vecLen=88 #[0, 87]
+vecLen=36 #[43, 78]
 maxdelta=128
 maxpower=64
 maxinst =129
@@ -76,7 +76,7 @@ def main():
         for t in reversed(range(len(track[inst]))): ## this limits # of notes play at the same time
             if hasattr(track[inst][t], 'tick'):
                 if isinstance(track[inst][t], midi.NoteOnEvent):
-                    pred_note[0][track[inst][t].data[0]-21] = 1e-100
+                    pred_note[0][track[inst][t].data[0]-43] = 1e-100
                 if track[inst][t].tick==0:
                     zs += 1 ## others
                 else:
@@ -112,7 +112,7 @@ def main():
             track[inst].append(midi.ControlChangeEvent(tick=diff, channel=ch, data=[3, 0])) ## append 'foo' event
 
         ## note on:
-        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+21), int(power)]))
+        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+43), int(power)]))
         tickAccum += delta
         last[inst] = tickAccum
         print('processed: ', i+1, '/', noteNum)
