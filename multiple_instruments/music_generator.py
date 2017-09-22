@@ -38,7 +38,7 @@ no_drum = args.no_drum
 
 segLen=48
 vecLen=36 #[43, 78]
-maxdelta=128
+maxdelta=32
 maxpower=64
 maxinst =129
 
@@ -56,7 +56,7 @@ def sample(preds, temperature=1.0):
 def main():
     global segLen, vecLen
     model = load_model('./multi.h5')
-    output = midi.Pattern(resolution=256)
+    output = midi.Pattern(resolution=16) ## reduce dimension of ticks...
     track = [midi.Track() for _ in xrange(maxinst)]
     for i in xrange(maxinst):
         output.append(track[i])

@@ -70,7 +70,7 @@ no_drum = args.no_drum
 step_size=1
 segLen=48
 vecLen=36 ## [43, 78]
-maxdelta=128
+maxdelta=32
 maxinst=129
 maxpower=64
 batch_size = args.batch_size
@@ -81,7 +81,7 @@ filter_size=128
 kernel_size=3 ## midi program changes are by groups
 drop_rate=0.2 ## for powerful computer
 Normal=120.0
-defaultRes=256.0
+defaultRes=16.0
 
 K.set_floatx(compute_precision)
 
