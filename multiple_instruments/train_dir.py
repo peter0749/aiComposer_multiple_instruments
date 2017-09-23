@@ -328,9 +328,9 @@ def main():
     aiComposer.compile(
             loss = 'categorical_crossentropy',
             loss_weights = {
-                             'note_output':1,
-                             'time_output':1e-1,
-                             'inst_output':1e-2,
+                             'inst_output':1,
+                             'note_output':1e-1,
+                             'time_output':1e-2
                            },
             optimizer=optimizer, metrics=['accuracy'])
     instClass.compile(
