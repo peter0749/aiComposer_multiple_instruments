@@ -38,7 +38,7 @@ no_drum = args.no_drum
 
 segLen=48
 vecLen=60 #[36, 95]
-maxdelta=32
+maxdelta=33 #[0, 32]
 maxinst =129
 
 def sample(preds, temperature=1.0):

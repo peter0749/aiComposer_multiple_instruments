@@ -76,7 +76,7 @@ no_drum = args.no_drum
 step_size=1
 segLen=48
 vecLen=60 ## [36, 95]
-maxdelta=32
+maxdelta=33 ## [0, 32]
 maxinst=129
 batch_size = args.batch_size
 hidden_delta=256
@@ -366,7 +366,7 @@ def main():
             noteClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'note'), steps_per_epoch=samples_per_epoch, epochs=epochs_note, validation_data=generator(args.valid_dir, step_size, batch_size, 'note'), validation_steps=5, callbacks=[noteCheckPoint, noteLogs]) ## fine tune note classifier
             for l in note_dict: full_dict[l].set_weights(note_dict[l].get_weights())
         if epochs_delta>0:
-            deltaClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'delta'), steps_per_epoch=samples_per_epoch, epochs=epochs_delta, validation_data=generator(args.valid_dir, step_size, batch_size, 'delta'), validation_steps=5, callbacks=[deltaCheckPoint, deltaLogs]) ## fine tune instrument classifier
+            deltaClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'delta'), steps_per_epoch=samples_per_epoch, epochs=epochs_delta, validation_data=generator(args.valid_dir, step_size, batch_size, 'delta'), validation_steps=5, callbacks=[deltaCheckPoint, deltaLogs]) ## fine tune tick classifier
             for l in delta_dict: full_dict[l].set_weights(delta_dict[l].get_weights())
         aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, 'all'), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, 'all'), validation_steps=10, callbacks=[checkPoint, Logs])
         aiComposer.save('./multi-%d.h5' % ite)
