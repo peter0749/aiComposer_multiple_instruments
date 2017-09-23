@@ -39,7 +39,6 @@ no_drum = args.no_drum
 segLen=48
 vecLen=60 #[36, 95]
 maxdelta=32
-maxpower=64
 maxinst =129
 
 def sample(preds, temperature=1.0):
@@ -68,7 +67,7 @@ def main():
         last[_] = -1
     tickAccum = 0
     for i in xrange(noteNum):
-        pred_note, pred_time, pred_inst, pred_power = model.predict([notes, deltas, insts], batch_size=1, verbose=0)
+        pred_note, pred_time, pred_inst = model.predict([notes, deltas, insts], batch_size=1, verbose=0)
         if no_drum:
             pred_inst[0][128] = 1e-100
         inst = int(sample(pred_inst[0], temperature_inst))
@@ -100,9 +99,6 @@ def main():
             track[inst].append(midi.ProgramChangeEvent(tick=0, data=[inst_code], channel=ch))
             last[inst]=0
         diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
-        power = (pred_power[0]+1)*2
-        power = 127 if power>127 else power
-        power = 1 if power<1 else power
 
         ## note alignment:
         while diff>127:
@@ -112,7 +108,7 @@ def main():
             track[inst].append(midi.ControlChangeEvent(tick=diff, channel=ch, data=[3, 0])) ## append 'foo' event
 
         ## note on:
-        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), int(power)]))
+        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), 127]))
         tickAccum += delta
         last[inst] = tickAccum
         print('processed: ', i+1, '/', noteNum)

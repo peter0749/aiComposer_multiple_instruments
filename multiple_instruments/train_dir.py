@@ -31,8 +31,14 @@ parser.add_argument('--batch_size', type=int, default=128, required=False,
                     help='Number of samples per iteration.')
 parser.add_argument('--epochs_inst', type=int, default=0, required=False,
                     help='Just a number of epochs. (train instrument predictor only)')
+parser.add_argument('--epochs_note', type=int, default=0, required=False,
+                    help='')
+parser.add_argument('--epochs_delta', type=int, default=0, required=False,
+                    help='')
 parser.add_argument('--epochs', type=int, default=128, required=False,
                     help='Just a number of epochs. (will not train instrument classifier weights)')
+parser.add_argument('--loop', type=int, default=1, required=False,
+                    help='')
 parser.add_argument('--sample_per_epoch', type=int, default=128, required=False,
                     help='Number of batchs every iteration.')
 parser.add_argument('--lr', type=float, default=0.0001, required=False,
@@ -45,8 +51,6 @@ parser.add_argument('--no_update_delta', action='store_true', default=False,
                     help='')
 parser.add_argument('--no_update_inst', action='store_true', default=False,
                     help='')
-parser.add_argument('--no_update_power', action='store_true', default=False,
-                    help='')
 parser.add_argument('--no_update_lstm', action='store_true', default=False,
                     help='')
 parser.add_argument('--no_update_att', action='store_true', default=False,
@@ -57,14 +61,16 @@ args = parser.parse_args()
 train_note = not args.no_update_note
 train_delta= not args.no_update_delta
 train_inst = not args.no_update_inst
-train_power= not args.no_update_power
 train_lstm = not args.no_update_lstm
 train_att  = not args.no_update_att
 
 compute_precision='float32'
 learning_rate = args.lr
+loops = args.loop
 epochs = args.epochs
 epochs_inst = args.epochs_inst
+epochs_note = args.epochs_note
+epochs_delta = args.epochs_delta
 samples_per_epoch = args.sample_per_epoch
 no_drum = args.no_drum
 step_size=1
@@ -72,7 +78,6 @@ segLen=48
 vecLen=60 ## [36, 95]
 maxdelta=32
 maxinst=129
-maxpower=64
 batch_size = args.batch_size
 hidden_delta=256
 hidden_note=256
@@ -112,10 +117,10 @@ def pattern2map(pattern, maxtick):
 
 def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
     ResScale = float(pattern.resolution) / float(defaultRes)
-    data=[(0.0,0,0,0)]#tick , note, instrument, power
+    data=[(0.0,0,0)]#tick , note, instrument, power
     instrument = 0 # sets to piano by default
     for track in pattern:
-        temp=[(0.0,0,0,0)] #tick, note, instrument, power
+        temp=[(0.0,0,0)] #tick, note, instrument, power
         speedRatio = 1.0
         accumTick = 0.
         for v in track:
@@ -131,13 +136,9 @@ def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
                 speedRatio = float(changeBPM)/float(Normal)
             elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
                 note = v.data[0]-36
-                power = v.data[1] / 2
-                power = 64 if power>64 else power
-                power = 1 if power<1 else power
-                power -= 1 ## [0, 63]
                 if instrument == 128 and no_drum:
                     continue
-                temp.append((accumTick, note, instrument, power))
+                temp.append((accumTick, note, instrument))
         temp = temp[1:-1]
         data.extend(temp)
     data = list(set(data)) ## remove duplicate data
@@ -149,18 +150,17 @@ def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
         tick = maxtick if tick>maxtick else tick ## set a threshold
         note = data[i+1][1]
         inst = data[i+1][2]
-        power= data[i+1][3]
-        data[i] = (tick,note,inst,power)
+        data[i] = (tick,note,inst)
     data = data[0:-2] ## data must have two elements. ow crashs
     return data
 
 def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
     ch2ins = dict()
     ResScale = float(pattern.resolution) / float(defaultRes)
-    data=[(0.0,0,0,0)]#tick , note, instrument, power
+    data=[(0.0,0,0)]#tick , note, instrument, power
     instrument = 0 # sets to piano by default
     for track in pattern:
-        temp=[(0.0,0,0,0)] #tick, note, instrument, power
+        temp=[(0.0,0,0)] #tick, note, instrument, power
         speedRatio = 1.0
         accumTick = 0.
         for v in track:
@@ -178,11 +178,7 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
             elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
                 ch = v.channel
                 note = v.data[0]-36
-                power = v.data[1] / 2
-                power = 64 if power>64 else power
-                power = 1 if power<1 else power
-                power -= 1 ## [0, 63]
-                temp.append((accumTick, note, ch, power))
+                temp.append((accumTick, note, ch))
         temp = temp[1:-1]
         data.extend(temp)
     data = list(set(data)) ## remove duplicate data
@@ -191,12 +187,10 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
         acc = data[i][0]
         note= data[i][1]
         ch  = data[i][2]
-        power=data[i][3]
         inst=ch2ins[ch]
         if inst==128 and no_drum:
             continue
-        temp.append((acc,note,inst,power))
-        #data[i] = (acc,note,inst,power)
+        temp.append((acc,note,inst))
     data = temp
     temp = None
     data.sort() ## for better quality
@@ -207,8 +201,7 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
         tick = maxtick if tick>maxtick else tick ## set a threshold
         note = data[i+1][1]
         inst = data[i+1][2]
-        power= data[i+1][3]
-        data[i] = (tick,note,inst,power)
+        data[i] = (tick,note,inst)
     data = data[0:-2] ## data must have two elements. ow crashs
     return data
 
@@ -223,26 +216,22 @@ def makeSegment(data, maxlen, step):
 def seg2vec(segment, nextseg, segLen, vecLen, maxdelta, maxinst):
     notes = np.zeros((len(segment), segLen, vecLen), dtype=np.bool)
     times = np.zeros((len(segment), segLen, maxdelta), dtype=np.bool)
-    powers= np.zeros((len(segment), segLen, 1), dtype=np.uint8)
     insts = np.zeros((len(segment), segLen, maxinst), dtype=np.bool)
 
     notes_n = np.zeros((len(segment), vecLen), dtype=np.bool)
     times_n = np.zeros((len(segment), maxdelta), dtype=np.bool)
-    powers_n= np.zeros((len(segment), 1), dtype=np.uint8)
     insts_n = np.zeros((len(segment), maxinst), dtype=np.bool)
     for i, seg in enumerate(segment):
         for t, note in enumerate(seg):
             times[i, t, int(note[0])] = 1
             notes[i, t, int(note[1])] = 1
             insts[i, t, int(note[2])] = 1
-            powers[i, t,0] = int(note[3])
         times_n[i, int(nextseg[i][0])] = 1
         notes_n[i, int(nextseg[i][1])] = 1
         insts_n[i, int(nextseg[i][2])] = 1
-        powers_n[i,0] = int(nextseg[i][3])
-    return notes, times, insts, powers, notes_n, times_n, insts_n, powers_n
+    return notes, times, insts, notes_n, times_n, insts_n
 
-def generator(path_name, step_size, batch_size, inst_only=False):
+def generator(path_name, step_size, batch_size, train_what=''):
     while True:
         randomFile = os.listdir(str(path_name))
         random.shuffle(randomFile)
@@ -254,7 +243,7 @@ def generator(path_name, step_size, batch_size, inst_only=False):
                 data = pattern2map(pattern,maxdelta-1)
                 seg, nextseg  = makeSegment(data, segLen, step_size)
                 data = None ## clean-up
-                note, time, inst, power, n_note, n_time, n_inst, n_power = seg2vec(seg, nextseg, segLen, vecLen, maxdelta, maxinst)
+                note, time, inst, n_note, n_time, n_inst = seg2vec(seg, nextseg, segLen, vecLen, maxdelta, maxinst)
                 seg = None
                 nextseg = None
             except:
@@ -262,30 +251,31 @@ def generator(path_name, step_size, batch_size, inst_only=False):
                 continue
             for i in xrange(0, len(note)-batch_size, batch_size):
                 idx = range(i, i+batch_size)
-                if inst_only:
+                if train_what=='inst':
                     yield ([note[idx],time[idx],inst[idx]], [n_inst[idx]])
-                else:
-                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx],n_power[idx]])
+                elif train_what=='note':
+                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx]])
+                elif train_what=='delta':
+                    yield ([note[idx],time[idx],inst[idx]], [n_time[idx]])
+                else: ## train all
+                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx]])
             l = len(note)%batch_size
             if l > 0:
                 idx = range(len(note)-l,len(note))
-                if inst_only:
+                if train_what=='inst':
                     yield ([note[idx],time[idx],inst[idx]], [n_inst[idx]])
-                else:
-                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx],n_power[idx]])
+                elif train_what=='note':
+                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx]])
+                elif train_what=='delta':
+                    yield ([note[idx],time[idx],inst[idx]], [n_time[idx]])
+                else: ## train all
+                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx]])
 
 def main():
     # network:
     # build the model: stacked GRUs
     print('Build model...')
     # network:
-    inst_lname = [
-                    'inst_conv',
-                    'inst_gru1',
-                    'inst_gru2',
-                    'inst_bn',
-                    'inst_output'
-                 ]
     with tf.device('/gpu:0'):
         noteInput  = Input(shape=(segLen, vecLen))
         noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteInput)
@@ -298,9 +288,9 @@ def main():
 
     with tf.device('/gpu:2'):
         instInput = Input(shape=(segLen, maxinst))
-        instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu', trainable=train_inst, name=inst_lname[0])(instInput)
-        instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate, trainable=train_inst, name=inst_lname[1])(instEncode)
-        instEncode   = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_inst, name=inst_lname[2])(instEncode)
+        instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu', trainable=train_inst)(instInput)
+        instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instEncode)
+        instEncode   = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instEncode)
 
     with tf.device('/gpu:3'):
         codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
@@ -308,57 +298,78 @@ def main():
         codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
         codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
         encoded = Dropout(drop_rate)(codec)
-        fc_inst = BatchNormalization(trainable=train_inst, name=inst_lname[3])(encoded)
-        pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name=inst_lname[4], trainable=train_inst)(fc_inst) ## output PMF
-        pred_inst_reduce = Dense(3, kernel_initializer='normal', trainable=train_inst)(pred_inst) ## encoder
-        arg_feature   = concatenate([encoded, pred_inst_reduce], axis=-1)
 
-        fc_notes = BatchNormalization(trainable=train_note)(arg_feature)
+        fc_inst = BatchNormalization(trainable=train_inst)(encoded)
+        pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output',  trainable=train_inst)(fc_inst) ## output PMF
+
+        fc_notes = BatchNormalization(trainable=train_note)(encoded)
         pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output', trainable=train_note)(fc_notes) ## output PMF
 
-        fc_delta = BatchNormalization(trainable=train_delta)(arg_feature)
+        fc_delta = BatchNormalization(trainable=train_delta)(encoded)
         pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output', trainable=train_delta)(fc_delta) ## output PMF
-
-        fc_power = BatchNormalization(trainable=train_power)(arg_feature)
-        pred_power = Dense(1, kernel_initializer='normal', activation='relu', name='power_output', trainable=train_power)(fc_power) ## output regression >= 0
-    aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, pred_inst, pred_power])
+    aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, pred_inst])
     instClass  = Model([noteInput, deltaInput, instInput], [pred_inst])
-    checkPoint = ModelCheckpoint(filepath="weights-{epoch:04d}-{loss:.2f}-{val_loss:.2f}.h5", verbose=1, save_best_only=False, save_weights_only=True, period=3)
+    noteClass  = Model([noteInput, deltaInput, instInput], [pred_notes])
+    deltaClass = Model([noteInput, deltaInput, instInput], [pred_delta])
+    checkPoint = ModelCheckpoint(filepath="top_weight.h5", verbose=1, save_best_only=True, save_weights_only=True, period=1)
+    instCheckPoint = ModelCheckpoint(filepath="inst_top_weight.h5", verbose=1, save_best_only=False, save_weights_only=True, period=1)
+    noteCheckPoint = ModelCheckpoint(filepath="note_top_weight.h5", verbose=1, save_best_only=False, save_weights_only=True, period=1)
+    deltaCheckPoint = ModelCheckpoint(filepath="delta_top_weight.h5", verbose=1, save_best_only=False, save_weights_only=True, period=1)
     Logs = CSVLogger('logs.csv', separator=',', append=True)
+    instLogs = CSVLogger('logs_inst.csv', separator=',', append=True)
+    noteLogs = CSVLogger('logs_note.csv', separator=',', append=True)
+    deltaLogs = CSVLogger('logs_delta.csv', separator=',', append=True)
     optimizer = RMSprop(lr=learning_rate, decay=learning_rate/epochs, clipnorm=1.)
     if ( os.path.isfile('./top_weight.h5')):  ## fine-tuning
         aiComposer.load_weights('./top_weight.h5')
     aiComposer.summary()
+
+    ## compile models:
     aiComposer.compile(
-            loss = {
-                     'note_output':'categorical_crossentropy',
-                     'time_output':'categorical_crossentropy',
-                     'inst_output':'categorical_crossentropy',
-                     'power_output':'mean_squared_error'
-                   },
+            loss = 'categorical_crossentropy',
             loss_weights = {
                              'note_output':1,
                              'time_output':1e-1,
                              'inst_output':1e-2,
-                             'power_output':1e-3
                            },
             optimizer=optimizer, metrics=['accuracy'])
     instClass.compile(
-            loss = {
-                     'inst_output':'categorical_crossentropy'
-                   },
+            loss = 'categorical_crossentropy',
             optimizer=optimizer, metrics=['accuracy'])
-    if epochs_inst>0:
-        for i in xrange(len(instClass.layers)):
-            instClass.layers[i].set_weights(aiComposer.layers[i].get_weights())
-        instClass.fit_generator(generator(args.train_dir, step_size, batch_size, True), steps_per_epoch=samples_per_epoch, epochs=epochs_inst, validation_data=generator(args.valid_dir, step_size, batch_size, True), validation_steps=5) ## fine tune instrument classifier
-        for i in xrange(len(instClass.layers)):
-            aiComposer.layers[i].set_weights(instClass.layers[i].get_weights()) ## write back updated weights to main model
-    for layer in aiComposer.layers: ## not train instrument classifier
-        for not_trainable_layer_name in inst_lname:
-            if layer.name == not_trainable_layer_name:
-                layer.trainable = False
-    aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, False), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, False), validation_steps=10, callbacks=[checkPoint, Logs])
+    noteClass.compile(
+            loss = 'categorical_crossentropy',
+            optimizer=optimizer, metrics=['accuracy'])
+    deltaClass.compile(
+            loss = 'categorical_crossentropy',
+            optimizer=optimizer, metrics=['accuracy'])
+
+    ## layer sets:
+    full_dict = dict([(layer.name, layer) for layer in aiComposer.layers])
+    inst_dict = dict([(layer.name, layer) for layer in instClass.layers])
+    note_dict = dict([(layer.name, layer) for layer in noteClass.layers])
+    delta_dict = dict([(layer.name, layer) for layer in deltaClass.layers])
+
+    ## set weights:
+    for layer_name in full_dict:
+        if layer_name in inst_dict:
+            inst_dict[layer_name].set_weights(full_dict[layer_name].get_weights())
+        if layer_name in note_dict:
+            note_dict[layer_name].set_weights(full_dict[layer_name].get_weights())
+        if layer_name in delta_dict:
+            delta_dict[layer_name].set_weights(full_dict[layer_name].get_weights())
+
+    for ite in xrange(loops):
+        if epochs_inst>0:
+            instClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'inst'), steps_per_epoch=samples_per_epoch, epochs=epochs_inst, validation_data=generator(args.valid_dir, step_size, batch_size, 'inst'), validation_steps=5, callbacks=[instCheckPoint, instLogs]) ## fine tune instrument classifier
+            for l in inst_dict: full_dict[l].set_weights(inst_dict[l].get_weights())
+        if epochs_note>0:
+            noteClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'note'), steps_per_epoch=samples_per_epoch, epochs=epochs_note, validation_data=generator(args.valid_dir, step_size, batch_size, 'note'), validation_steps=5, callbacks=[noteCheckPoint, noteLogs]) ## fine tune note classifier
+            for l in note_dict: full_dict[l].set_weights(note_dict[l].get_weights())
+        if epochs_delta>0:
+            deltaClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'delta'), steps_per_epoch=samples_per_epoch, epochs=epochs_delta, validation_data=generator(args.valid_dir, step_size, batch_size, 'delta'), validation_steps=5, callbacks=[deltaCheckPoint, deltaLogs]) ## fine tune instrument classifier
+            for l in delta_dict: full_dict[l].set_weights(delta_dict[l].get_weights())
+        aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, 'all'), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, 'all'), validation_steps=10, callbacks=[checkPoint, Logs])
+        aiComposer.save('./multi-%d.h5' % ite)
     aiComposer.save('./multi.h5')
 
 if __name__ == "__main__":
