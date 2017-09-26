@@ -91,7 +91,7 @@ instMap[60] = 11
 instMap[72] = 12
 instMap[73] = 13
 
-inRange = lambda(x): (x>=40&&x<=47) or (x>=56&&x<=58) or (x==60) or (x==72) or (x==73)
+inRange = lambda(x): (x>=40 and x<=47) or (x>=56 and x<=58) or (x==60) or (x==72) or (x==73)
 
 # Sorted x
 def purge(x):
