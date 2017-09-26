@@ -237,7 +237,7 @@ def generator(path_name, step_size, batch_size, train_what=''):
                 nextseg = None
             except:
                 pattern = data = seg = nextseg = None
-                sys.stderr.write('something wrong...:\\')
+                #sys.stderr.write('something wrong...:\\')
                 continue
             for i in xrange(0, len(note)-batch_size, batch_size):
                 idx = range(i, i+batch_size)
