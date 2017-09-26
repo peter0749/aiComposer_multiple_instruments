@@ -25,7 +25,7 @@ epochs = 1
 segLen=48
 vecLen=60
 maxdelta=33 ## [0,32]
-maxinst=129
+maxinst=14
 maxpower=64
 batch_size=1
 hidden_delta=256
@@ -52,8 +52,7 @@ with tf.device('/gpu:1'):
 
 with tf.device('/gpu:2'):
     instInput = Input(shape=(segLen, maxinst))
-    instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu')(instInput)
-    instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
+    instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instInput)
     instEncode   = GRU(128, return_sequences=True, dropout=drop_rate)(instEncode)
 
 with tf.device('/gpu:3'):
