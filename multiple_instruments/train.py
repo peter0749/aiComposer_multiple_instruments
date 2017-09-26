@@ -135,7 +135,7 @@ def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
                     instrument = 128 # Percussion Key. a.k.a. drums
                 else:
                     instrument = v.data[0]
-                if not inRange(instrument): ## not a desired instrument
+                if not inRange(instrument): ## not a desired instrument, discard this track
                     break
             elif isinstance(v, midi.SetTempoEvent):
                 changeBPM = Tempo2BPM(v)
@@ -193,9 +193,9 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
         acc = data[i][0]
         note= data[i][1]
         ch  = data[i][2]
+        if not ch in ch2ins: continue
         inst=ch2ins[ch]
-        if not inRange(inst):
-            continue
+        if not inRange(inst): continue
         temp.append((acc,note,inst))
     data = temp
     temp = None
