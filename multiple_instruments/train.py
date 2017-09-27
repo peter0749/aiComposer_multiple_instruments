@@ -121,12 +121,12 @@ def pattern2map(pattern, maxtick):
 def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
     ResScale = float(pattern.resolution) / float(defaultRes)
     data=[(0.0,0,0)]#tick , note, instrument, power
-    instrument = 0 # sets to piano by default
+    instrument = 46 # sets to piano by default
     for track in pattern:
         temp=[(0.0,0,0)] #tick, note, instrument, power
         speedRatio = 1.0
         accumTick = 0.
-        instrument = 0 # sets to piano by default
+        instrument = 46 # sets to piano by default
         for v in track:
             if hasattr(v, 'tick') :
                 accumTick = accumTick + float(v.tick)/speedRatio
@@ -163,7 +163,7 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
     ch2ins = dict()
     ResScale = float(pattern.resolution) / float(defaultRes)
     data=[(0.0,0,0)]#tick , note, instrument, power
-    instrument = 0 # sets to piano by default
+    instrument = 46 # sets to piano by default
     for track in pattern:
         temp=[(0.0,0,0)] #tick, note, instrument, power
         speedRatio = 1.0
