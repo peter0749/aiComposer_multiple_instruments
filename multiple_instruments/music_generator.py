@@ -81,7 +81,7 @@ def main():
         notes = np.roll(notes, -1, axis=1)
         deltas = np.roll(deltas, -1, axis=1)
         notes[0, segLen-1, :]=0 ## reset last event
-        notes[0, segLen-1, note]=1 ## set predicted event
+        notes[0, segLen-1, key]=1 ## set predicted event
         deltas[0, segLen-1, :]=0 ## reset last event
         deltas[0, segLen-1, delta]=1 ## set predicted event
         if last[inst]==-1:
