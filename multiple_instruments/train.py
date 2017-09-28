@@ -104,6 +104,7 @@ def pattern2map(pattern, maxtick):
     ResScale = float(pattern.resolution) / float(defaultRes)
     data=[(0.0,0,0)]#tick , note, main_or_accompany
     for instrument, track in enumerate(pattern): ## main melody if instrument==0 else accompany
+        if instrument>1: break
         temp=[(0.0,0,0)] #tick, note, instrument
         speedRatio = 1.0
         accumTick = 0.
