@@ -34,9 +34,10 @@ temperature_inst = args.inst_temp
 finger_limit = args.finger_number
 
 segLen=48
-vecLen=60 #[36, 95]
+track_num=2
+maxrange=60 #[36, 95]
+vecLen=maxrange*track_num
 maxdelta=33 #[0, 32]
-maxinst =2
 
 def sample(preds, temperature=1.0):
     if temperature < 1e-9:
@@ -58,36 +59,34 @@ def main():
         output.append(track[i])
     notes = np.zeros((1, segLen, vecLen))
     deltas = np.zeros((1, segLen, maxdelta))
-    insts = np.zeros((1, segLen, maxinst))
     last = np.zeros(maxinst)
     for _ in xrange(maxinst):
         last[_] = -1
     tickAccum = 0
     for i in xrange(noteNum):
-        pred_note, pred_time, pred_inst = model.predict([notes, deltas, insts], batch_size=1, verbose=0)
-        inst = int(sample(pred_inst[0], temperature_inst))
-        zs = 1 ## how many notes play at the same time? self += 1
-        for t in reversed(range(len(track[inst]))): ## this limits # of notes play at the same time
-            if hasattr(track[inst][t], 'tick'):
-                if isinstance(track[inst][t], midi.NoteOnEvent):
-                    pred_note[0][track[inst][t].data[0]-36] = 1e-100
-                if track[inst][t].tick==0:
-                    zs += 1 ## others
-                else:
-                    break
-        if zs>=finger_limit: ## no more fingers
-            pred_time[0][0] = 1e-100
-        note = int(sample(pred_note[0], temperature_note))
+        pred_note, pred_time = model.predict([notes, deltas], batch_size=1, verbose=0)
+        for inst in xrange(track_num):
+            zs = 1 ## how many notes play at the same time? self += 1
+            for t in reversed(range(len(track[inst]))): ## this limits # of notes play at the same time
+                if hasattr(track[inst][t], 'tick'):
+                    if isinstance(track[inst][t], midi.NoteOnEvent):
+                        pred_note[0][(track[inst][t].data[0]-36)+inst*maxrange] = 1e-100
+                    if track[inst][t].tick==0:
+                        zs += 1 ## others
+                    else:
+                        break
+            if zs>=finger_limit: ## no more fingers
+                pred_time[0][0] = 1e-100
+        key = int(sample(pred_note[0], temperature_note))
+        note = key  % maxrange
+        inst = key // maxrange
         delta = int(sample(pred_time[0], temperature_delta))
         notes = np.roll(notes, -1, axis=1)
         deltas = np.roll(deltas, -1, axis=1)
-        insts = np.roll(insts, -1, axis=1)
         notes[0, segLen-1, :]=0 ## reset last event
         notes[0, segLen-1, note]=1 ## set predicted event
         deltas[0, segLen-1, :]=0 ## reset last event
         deltas[0, segLen-1, delta]=1 ## set predicted event
-        insts[0, segLen-1, :]=0
-        insts[0, segLen-1, inst]=1
         if last[inst]==-1:
             track[inst].append(midi.ProgramChangeEvent(tick=0, data=[0], channel=0)) ## first event: program change to piano
             last[inst]=0

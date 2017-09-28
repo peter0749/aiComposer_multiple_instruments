@@ -25,14 +25,12 @@ parser.add_argument('valid_dir', metavar='validation', type=str,
                     help='Path to the validation set.')
 parser.add_argument('--batch_size', type=int, default=128, required=False,
                     help='Number of samples per iteration.')
-parser.add_argument('--epochs_inst', type=int, default=0, required=False,
-                    help='Just a number of epochs. (train instrument predictor only)')
 parser.add_argument('--epochs_note', type=int, default=0, required=False,
                     help='')
 parser.add_argument('--epochs_delta', type=int, default=0, required=False,
                     help='')
 parser.add_argument('--epochs', type=int, default=128, required=False,
-                    help='Just a number of epochs. (will not train instrument classifier weights)')
+                    help='Just a number of epochs.')
 parser.add_argument('--loop', type=int, default=1, required=False,
                     help='')
 parser.add_argument('--sample_per_epoch', type=int, default=128, required=False,
@@ -43,8 +41,6 @@ parser.add_argument('--no_update_note', action='store_true', default=False,
                     help='')
 parser.add_argument('--no_update_delta', action='store_true', default=False,
                     help='')
-parser.add_argument('--no_update_inst', action='store_true', default=False,
-                    help='')
 parser.add_argument('--no_update_lstm', action='store_true', default=False,
                     help='')
 parser.add_argument('--no_update_att', action='store_true', default=False,
@@ -54,7 +50,6 @@ args = parser.parse_args()
 
 train_note = not args.no_update_note
 train_delta= not args.no_update_delta
-train_inst = not args.no_update_inst
 train_lstm = not args.no_update_lstm
 train_att  = not args.no_update_att
 
@@ -62,19 +57,18 @@ compute_precision='float32'
 learning_rate = args.lr
 loops = args.loop
 epochs = args.epochs
-epochs_inst = args.epochs_inst
 epochs_note = args.epochs_note
 epochs_delta = args.epochs_delta
 samples_per_epoch = args.sample_per_epoch
 step_size=1
 segLen=48
-vecLen=60 ## [36, 95]
+track_num=2
+maxrange=60 ## [36, 95]
+vecLen=maxrange*track_num
 maxdelta=33 ## [0, 32]
-maxinst=2
 batch_size = args.batch_size
 hidden_delta=256
 hidden_note=256
-hidden_inst=256
 drop_rate=0.2 ## for powerful computer
 Normal=120.0
 defaultRes=16.0
@@ -103,10 +97,10 @@ def Tempo2BPM(x):
 def pattern2map(pattern, maxtick):
     ResScale = float(pattern.resolution) / float(defaultRes)
     instrument = -1
-    data=[(0.0,0,0)]#tick , note, main_or_accompany
+    data=[(0.0,0)]#tick , key (main+accompany)
     for track in pattern: ## main melody if instrument==0 else accompany
         if instrument==1: break ## if main & accompany is set, then break.
-        temp=[(0.0,0,0)] #tick, note, instrument
+        temp=[(0.0,0)] #tick, note, instrument
         speedRatio = 1.0
         accumTick = 0.
         noteOnDetected = False
@@ -119,7 +113,7 @@ def pattern2map(pattern, maxtick):
             elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
                 if not noteOnDetected: instrument+=1
                 noteOnDetected = True
-                note = v.data[0]-36
+                note = (v.data[0]-36)+instrument*maxrange
                 temp.append((accumTick, note, instrument))
         temp = temp[1:-1]
         data.extend(temp)
@@ -145,23 +139,19 @@ def makeSegment(data, maxlen, step):
     randIdx = np.random.permutation(len(sentences))
     return np.array(sentences)[randIdx], np.array(nextseq)[randIdx]
 
-def seg2vec(segment, nextseg, segLen, vecLen, maxdelta, maxinst):
+def seg2vec(segment, nextseg, segLen, vecLen, maxdelta):
     notes = np.zeros((len(segment), segLen, vecLen), dtype=np.bool)
     times = np.zeros((len(segment), segLen, maxdelta), dtype=np.bool)
-    insts = np.zeros((len(segment), segLen, maxinst), dtype=np.bool)
 
     notes_n = np.zeros((len(segment), vecLen), dtype=np.bool)
     times_n = np.zeros((len(segment), maxdelta), dtype=np.bool)
-    insts_n = np.zeros((len(segment), maxinst), dtype=np.bool)
     for i, seg in enumerate(segment):
         for t, note in enumerate(seg):
             times[i, t, int(note[0])] = 1
             notes[i, t, int(note[1])] = 1
-            insts[i, t, int(note[2])] = 1
         times_n[i, int(nextseg[i][0])] = 1
         notes_n[i, int(nextseg[i][1])] = 1
-        insts_n[i, int(nextseg[i][2])] = 1
-    return notes, times, insts, notes_n, times_n, insts_n
+    return notes, times, notes_n, times_n
 
 def generator(path_name, step_size, batch_size, train_what=''):
     while True:
@@ -175,7 +165,7 @@ def generator(path_name, step_size, batch_size, train_what=''):
                 data = pattern2map(pattern,maxdelta-1)
                 seg, nextseg  = makeSegment(data, segLen, step_size)
                 data = None ## clean-up
-                note, time, inst, n_note, n_time, n_inst = seg2vec(seg, nextseg, segLen, vecLen, maxdelta, maxinst)
+                note, time, n_note, n_time = seg2vec(seg, nextseg, segLen, vecLen, maxdelta)
                 seg = None
                 nextseg = None
             except:
@@ -184,25 +174,21 @@ def generator(path_name, step_size, batch_size, train_what=''):
                 continue
             for i in xrange(0, len(note)-batch_size, batch_size):
                 idx = range(i, i+batch_size)
-                if train_what=='inst':
-                    yield ([note[idx],time[idx],inst[idx]], [n_inst[idx]])
-                elif train_what=='note':
-                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx]])
+                if train_what=='note':
+                    yield ([note[idx],time[idx]], [n_note[idx]])
                 elif train_what=='delta':
-                    yield ([note[idx],time[idx],inst[idx]], [n_time[idx]])
+                    yield ([note[idx],time[idx]], [n_time[idx]])
                 else: ## train all
-                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx]])
+                    yield ([note[idx],time[idx]], [n_note[idx],n_time[idx]])
             l = len(note)%batch_size
             if l > 0:
                 idx = range(len(note)-l,len(note))
-                if train_what=='inst':
-                    yield ([note[idx],time[idx],inst[idx]], [n_inst[idx]])
-                elif train_what=='note':
-                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx]])
+                if train_what=='note':
+                    yield ([note[idx],time[idx]], [n_note[idx]])
                 elif train_what=='delta':
-                    yield ([note[idx],time[idx],inst[idx]], [n_time[idx]])
+                    yield ([note[idx],time[idx]], [n_time[idx]])
                 else: ## train all
-                    yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx]])
+                    yield ([note[idx],time[idx]], [n_note[idx],n_time[idx]])
 
 def main():
     # network:
@@ -217,33 +203,24 @@ def main():
     deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaInput)
     deltaEncode = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaEncode)
 
-    instInput = Input(shape=(segLen, maxinst))
-    instEncode   = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instInput)
-
-    codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
-    codec = SoftAttentionBlock(codec, segLen, 384, trainable=train_att)
-    codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
+    codec = concatenate([noteEncode, deltaEncode], axis=-1) ## return last state
+    codec = SoftAttentionBlock(codec, segLen, 256, trainable=train_att)
+    codec = LSTM(256, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
     codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
-
-    fc_inst = BatchNormalization(trainable=train_inst)(encoded)
-    pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output',  trainable=train_inst)(fc_inst) ## output PMF
 
     fc_notes = BatchNormalization(trainable=train_note)(encoded)
     pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output', trainable=train_note)(fc_notes) ## output PMF
 
     fc_delta = BatchNormalization(trainable=train_delta)(encoded)
     pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output', trainable=train_delta)(fc_delta) ## output PMF
-    aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, pred_inst])
-    instClass  = Model([noteInput, deltaInput, instInput], [pred_inst])
-    noteClass  = Model([noteInput, deltaInput, instInput], [pred_notes])
-    deltaClass = Model([noteInput, deltaInput, instInput], [pred_delta])
+    aiComposer = Model([noteInput, deltaInput], [pred_notes, pred_delta])
+    noteClass  = Model([noteInput, deltaInput], [pred_notes])
+    deltaClass = Model([noteInput, deltaInput], [pred_delta])
     checkPoint = ModelCheckpoint(filepath="top_weight.h5", verbose=1, save_best_only=True, save_weights_only=True, period=1)
-    instCheckPoint = ModelCheckpoint(filepath="inst_weight.h5", verbose=1, save_best_only=False, save_weights_only=True, period=1)
     noteCheckPoint = ModelCheckpoint(filepath="note_weight.h5", verbose=1, save_best_only=False, save_weights_only=True, period=1)
     deltaCheckPoint = ModelCheckpoint(filepath="delta_weight.h5", verbose=1, save_best_only=False, save_weights_only=True, period=1)
     Logs = CSVLogger('logs.csv', separator=',', append=True)
-    instLogs = CSVLogger('logs_inst.csv', separator=',', append=True)
     noteLogs = CSVLogger('logs_note.csv', separator=',', append=True)
     deltaLogs = CSVLogger('logs_delta.csv', separator=',', append=True)
     optimizer = RMSprop(lr=learning_rate, decay=learning_rate/epochs, clipnorm=1.)
@@ -255,13 +232,9 @@ def main():
     aiComposer.compile(
             loss = 'categorical_crossentropy',
             loss_weights = {
-                             'inst_output':1,
-                             'note_output':1e-1,
-                             'time_output':1e-2
+                             'note_output':1,
+                             'time_output':1e-1
                            },
-            optimizer=optimizer, metrics=['accuracy'])
-    instClass.compile(
-            loss = 'categorical_crossentropy',
             optimizer=optimizer, metrics=['accuracy'])
     noteClass.compile(
             loss = 'categorical_crossentropy',
@@ -272,23 +245,17 @@ def main():
 
     ## layer sets:
     full_dict = dict([(layer.name, layer) for layer in aiComposer.layers])
-    inst_dict = dict([(layer.name, layer) for layer in instClass.layers])
     note_dict = dict([(layer.name, layer) for layer in noteClass.layers])
     delta_dict = dict([(layer.name, layer) for layer in deltaClass.layers])
 
     ## set weights:
     for layer_name in full_dict:
-        if layer_name in inst_dict:
-            inst_dict[layer_name].set_weights(full_dict[layer_name].get_weights())
         if layer_name in note_dict:
             note_dict[layer_name].set_weights(full_dict[layer_name].get_weights())
         if layer_name in delta_dict:
             delta_dict[layer_name].set_weights(full_dict[layer_name].get_weights())
 
     for ite in xrange(loops):
-        if epochs_inst>0:
-            instClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'inst'), steps_per_epoch=samples_per_epoch, epochs=epochs_inst, validation_data=generator(args.valid_dir, step_size, batch_size, 'inst'), validation_steps=5, callbacks=[instCheckPoint, instLogs]) ## fine tune instrument classifier
-            for l in inst_dict: full_dict[l].set_weights(inst_dict[l].get_weights())
         if epochs_note>0:
             noteClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'note'), steps_per_epoch=samples_per_epoch, epochs=epochs_note, validation_data=generator(args.valid_dir, step_size, batch_size, 'note'), validation_steps=5, callbacks=[noteCheckPoint, noteLogs]) ## fine tune note classifier
             for l in note_dict: full_dict[l].set_weights(note_dict[l].get_weights())
