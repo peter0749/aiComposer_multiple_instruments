@@ -20,8 +20,6 @@ parser.add_argument('--note_temp', type=float, default=0.7, required=False,
                     help='Temperture of notes.')
 parser.add_argument('--delta_temp', type=float, default=0.7, required=False,
                     help='Temperture of time.')
-parser.add_argument('--inst_temp', type=float, default=0.7, required=False,
-                    help='Temperture of instruments.')
 parser.add_argument('--finger_number', type=int, default=5, required=False,
                     help='Maximum number of notes play at the same time.')
 
@@ -30,7 +28,6 @@ tar_midi = args.output_midi_path
 noteNum  = args.n
 temperature_note = args.note_temp
 temperature_delta = args.delta_temp
-temperature_inst = args.inst_temp
 finger_limit = args.finger_number
 
 segLen=48
