@@ -1,9 +1,5 @@
 from __future__ import print_function
 import os
-import tensorflow as tf
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-session = tf.Session(config=config)
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
 from keras.layers import LSTM, GRU, BatchNormalization, RepeatVector, TimeDistributed
@@ -43,8 +39,6 @@ parser.add_argument('--sample_per_epoch', type=int, default=128, required=False,
                     help='Number of batchs every iteration.')
 parser.add_argument('--lr', type=float, default=0.0001, required=False,
                     help='Learning rate.')
-parser.add_argument('--no_drum', action='store_true', default=False,
-                    help='No drums.')
 parser.add_argument('--no_update_note', action='store_true', default=False,
                     help='')
 parser.add_argument('--no_update_delta', action='store_true', default=False,
@@ -72,18 +66,15 @@ epochs_inst = args.epochs_inst
 epochs_note = args.epochs_note
 epochs_delta = args.epochs_delta
 samples_per_epoch = args.sample_per_epoch
-no_drum = args.no_drum
 step_size=1
 segLen=48
 vecLen=60 ## [36, 95]
 maxdelta=33 ## [0, 32]
-maxinst=129
+maxinst=2
 batch_size = args.batch_size
 hidden_delta=256
 hidden_note=256
 hidden_inst=256
-filter_size=128
-kernel_size=3 ## midi program changes are by groups
 drop_rate=0.2 ## for powerful computer
 Normal=120.0
 defaultRes=16.0
@@ -110,90 +101,25 @@ def Tempo2BPM(x):
 ## merge all tracks into one track
 
 def pattern2map(pattern, maxtick):
-    if len(pattern) > 1:
-        return normal_pattern2map(pattern, maxtick)
-    else:
-        return ch_pattern2map(pattern, maxtick)
-
-def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
     ResScale = float(pattern.resolution) / float(defaultRes)
-    data=[(0.0,0,0)]#tick , note, instrument, power
-    instrument = 0 # sets to piano by default
-    for track in pattern:
-        temp=[(0.0,0,0)] #tick, note, instrument, power
+    data=[(0.0,0,0)]#tick , note, main_or_accompany
+    for instrument, track in enumerate(pattern): ## main melody if instrument==0 else accompany
+        temp=[(0.0,0,0)] #tick, note, instrument
         speedRatio = 1.0
         accumTick = 0.
         for v in track:
             if hasattr(v, 'tick') :
                 accumTick = accumTick + float(v.tick)/speedRatio
-            if isinstance(v, midi.ProgramChangeEvent):
-                if hasattr(v, 'channel') and v.channel==9:
-                    instrument = 128 # Percussion Key. a.k.a. drums
-                else:
-                    instrument = v.data[0]
-            elif isinstance(v, midi.SetTempoEvent):
+            if isinstance(v, midi.SetTempoEvent):
                 changeBPM = Tempo2BPM(v)
                 speedRatio = float(changeBPM)/float(Normal)
             elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
                 note = v.data[0]-36
-                if instrument == 128 and no_drum:
-                    continue
                 temp.append((accumTick, note, instrument))
         temp = temp[1:-1]
         data.extend(temp)
     data = list(set(data)) ## remove duplicate data
     data.sort()
-    data = purge(data)
-    for i in range(0, len(data)-1):
-        tick = data[i+1][0] - data[i][0]
-        tick = int(round(tick/ResScale)) ## adjust resolution, downsampling
-        tick = maxtick if tick>maxtick else tick ## set a threshold
-        note = data[i+1][1]
-        inst = data[i+1][2]
-        data[i] = (tick,note,inst)
-    data = data[0:-2] ## data must have two elements. ow crashs
-    return data
-
-def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
-    ch2ins = dict()
-    ResScale = float(pattern.resolution) / float(defaultRes)
-    data=[(0.0,0,0)]#tick , note, instrument, power
-    instrument = 0 # sets to piano by default
-    for track in pattern:
-        temp=[(0.0,0,0)] #tick, note, instrument, power
-        speedRatio = 1.0
-        accumTick = 0.
-        for v in track:
-            if hasattr(v, 'tick') :
-                accumTick = accumTick + float(v.tick)/speedRatio
-            if isinstance(v, midi.ProgramChangeEvent):
-                if hasattr(v, 'channel') and v.channel==9:
-                    instrument = 128 # Percussion Key. a.k.a. drums
-                else:
-                    instrument = v.data[0]
-                ch2ins[v.channel] = instrument
-            elif isinstance(v, midi.SetTempoEvent):
-                changeBPM = Tempo2BPM(v)
-                speedRatio = float(changeBPM)/float(Normal)
-            elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
-                ch = v.channel
-                note = v.data[0]-36
-                temp.append((accumTick, note, ch))
-        temp = temp[1:-1]
-        data.extend(temp)
-    data = list(set(data)) ## remove duplicate data
-    temp = []
-    for i in xrange(len(data)): ## channel -> instrument
-        acc = data[i][0]
-        note= data[i][1]
-        ch  = data[i][2]
-        inst=ch2ins[ch]
-        if inst==128 and no_drum:
-            continue
-        temp.append((acc,note,inst))
-    data = temp
-    temp = None
-    data.sort() ## for better quality
     data = purge(data)
     for i in range(0, len(data)-1):
         tick = data[i+1][0] - data[i][0]
@@ -211,7 +137,8 @@ def makeSegment(data, maxlen, step):
     for i in xrange(0, len(data) - maxlen, step):
         sentences.append(data[i: i + maxlen])
         nextseq.append(data[i + maxlen])
-    return sentences, nextseq
+    randIdx = np.random.permutation(len(sentences))
+    return np.array(sentences)[randIdx], np.array(nextseq)[randIdx]
 
 def seg2vec(segment, nextseg, segLen, vecLen, maxdelta, maxinst):
     notes = np.zeros((len(segment), segLen, vecLen), dtype=np.bool)
@@ -248,6 +175,7 @@ def generator(path_name, step_size, batch_size, train_what=''):
                 nextseg = None
             except:
                 pattern = data = seg = nextseg = None
+                sys.stderr.write('something wrong...:\\')
                 continue
             for i in xrange(0, len(note)-batch_size, batch_size):
                 idx = range(i, i+batch_size)
@@ -276,37 +204,31 @@ def main():
     # build the model: stacked GRUs
     print('Build model...')
     # network:
-    with tf.device('/gpu:0'):
-        noteInput  = Input(shape=(segLen, vecLen))
-        noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteInput)
-        noteEncode = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteEncode)
+    noteInput  = Input(shape=(segLen, vecLen))
+    noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteInput)
+    noteEncode = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteEncode)
 
-    with tf.device('/gpu:1'):
-        deltaInput = Input(shape=(segLen, maxdelta))
-        deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaInput)
-        deltaEncode = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaEncode)
+    deltaInput = Input(shape=(segLen, maxdelta))
+    deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaInput)
+    deltaEncode = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaEncode)
 
-    with tf.device('/gpu:2'):
-        instInput = Input(shape=(segLen, maxinst))
-        instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu', trainable=train_inst)(instInput)
-        instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instEncode)
-        instEncode   = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instEncode)
+    instInput = Input(shape=(segLen, maxinst))
+    instEncode   = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instInput)
 
-    with tf.device('/gpu:3'):
-        codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
-        codec = SoftAttentionBlock(codec, segLen, 384, trainable=train_att)
-        codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
-        codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
-        encoded = Dropout(drop_rate)(codec)
+    codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
+    codec = SoftAttentionBlock(codec, segLen, 384, trainable=train_att)
+    codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
+    codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
+    encoded = Dropout(drop_rate)(codec)
 
-        fc_inst = BatchNormalization(trainable=train_inst)(encoded)
-        pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output',  trainable=train_inst)(fc_inst) ## output PMF
+    fc_inst = BatchNormalization(trainable=train_inst)(encoded)
+    pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output',  trainable=train_inst)(fc_inst) ## output PMF
 
-        fc_notes = BatchNormalization(trainable=train_note)(encoded)
-        pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output', trainable=train_note)(fc_notes) ## output PMF
+    fc_notes = BatchNormalization(trainable=train_note)(encoded)
+    pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output', trainable=train_note)(fc_notes) ## output PMF
 
-        fc_delta = BatchNormalization(trainable=train_delta)(encoded)
-        pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output', trainable=train_delta)(fc_delta) ## output PMF
+    fc_delta = BatchNormalization(trainable=train_delta)(encoded)
+    pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output', trainable=train_delta)(fc_delta) ## output PMF
     aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, pred_inst])
     instClass  = Model([noteInput, deltaInput, instInput], [pred_inst])
     noteClass  = Model([noteInput, deltaInput, instInput], [pred_notes])

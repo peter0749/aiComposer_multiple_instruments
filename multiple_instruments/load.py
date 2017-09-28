@@ -24,15 +24,13 @@ learning_rate = 0.002
 epochs = 1
 segLen=48
 vecLen=60
-maxdelta=33
-maxinst=129
+maxdelta=33 ## [0,32]
 maxpower=64
+maxinst =2
 batch_size=1
 hidden_delta=256
 hidden_note=256
 hidden_inst=256
-filter_size=128
-kernel_size=3 ## midi program changes are by groups
 drop_rate=0.2 ## for powerful computer
 
 K.set_floatx(compute_precision);
@@ -52,9 +50,9 @@ with tf.device('/gpu:1'):
 
 with tf.device('/gpu:2'):
     instInput = Input(shape=(segLen, maxinst))
-    instEncode   = Conv1D(filters=filter_size, kernel_size=kernel_size, padding='same', input_shape=(segLen, maxinst), activation = 'relu')(instInput)
-    instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instEncode)
-    instEncode   = GRU(128, return_sequences=True, dropout=drop_rate)(instEncode)
+    #instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instInput)
+    #instEncode   = GRU(128, return_sequences=True, dropout=drop_rate)(instEncode)
+    instEncode   = GRU(128, return_sequences=True, dropout=drop_rate)(instInput)
 
 with tf.device('/gpu:3'):
     codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
