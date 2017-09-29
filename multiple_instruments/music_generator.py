@@ -22,10 +22,16 @@ parser.add_argument('--delta_temp', type=float, default=0.7, required=False,
                     help='Temperture of time.')
 parser.add_argument('--inst_temp', type=float, default=0.7, required=False,
                     help='Temperture of instruments.')
-parser.add_argument('--finger_number', type=int, default=5, required=False,
-                    help='Maximum number of notes play at the same time.')
+parser.add_argument('--pipe_lim', type=int, default=1, required=False,
+                    help='Maximum number of pipe(s) play at the same time.')
+parser.add_argument('--brass_lim', type=int, default=1, required=False,
+                    help='Maximum number of brass(es) play at the same time.')
+parser.add_argument('--string_lim', type=int, default=2, required=False,
+                    help='Maximum number of string(s) play at the same time.')
 parser.add_argument('--alignment', type=int, default=0, required=False,
                     help='Tick alignment.')
+parser.add_argument('--bpm', type=float, default=120.0, required=False,
+                    help='Bpm (speed)')
 
 args = parser.parse_args()
 tar_midi = args.output_midi_path
@@ -33,8 +39,17 @@ noteNum  = args.n
 temperature_note = args.note_temp
 temperature_delta = args.delta_temp
 temperature_inst = args.inst_temp
-finger_limit = args.finger_number
+
+pipe_lim = args.pipe_lim
+string_lim = args.string_lim
+brass_lim = args.brass_lim
+
 align = args.alignment
+bpm = args.bpm
+defaultBpm = 120.0
+speedRatio = bpm / defaultBpm
+defaultUnit = 500000
+changedSpeed= int(round(500000.0/speedRatio))
 
 segLen=48
 vecLen=60 #[36, 95]
@@ -70,6 +85,10 @@ def main():
     deltas = np.zeros((1, segLen, maxdelta))
     insts = np.zeros((1, segLen, maxinst))
     last = np.zeros(maxinst)
+    limits = np.zeros(maxinst)
+    limits[:8] = string_lim ## at most 2 instruments play for each type of instruments
+    limits[8:12] = brass_lim ## for brass
+    limits[12:] = pipe_lim ## for pipes
     for _ in xrange(maxinst):
         last[_] = -1
     tickAccum = 0
@@ -85,7 +104,7 @@ def main():
                     zs += 1 ## others
                 else:
                     break
-        if zs>=finger_limit: ## no more fingers
+        if zs>=limits[inst]: ## no more
             pred_time[0][0] = 1e-100
         note = int(sample(pred_note[0], temperature_note))
         delta = 0 if i==0 else int(sample(pred_time[0], temperature_delta))
@@ -103,6 +122,7 @@ def main():
         ch = 1
         inst_code = invMap[inst]
         if last[inst]==-1:
+            track[inst].append(midi.SetTempoEvent(tick=0, data=[(changedSpeed>>16) &0xff, (changedSpeed>>8) &0xff, changedSpeed &0xff]))
             track[inst].append(midi.ProgramChangeEvent(tick=0, data=[inst_code], channel=ch))
             last[inst]=0
         diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
