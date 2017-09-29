@@ -88,7 +88,7 @@ def main():
         if zs>=finger_limit: ## no more fingers
             pred_time[0][0] = 1e-100
         note = int(sample(pred_note[0], temperature_note))
-        delta = int(sample(pred_time[0], temperature_delta))
+        delta = 0 if i==0 else int(sample(pred_time[0], temperature_delta))
         if align>1:
             delta = int(round(delta/align)*align)
         notes = np.roll(notes, -1, axis=1)
