@@ -22,6 +22,8 @@ parser.add_argument('--delta_temp', type=float, default=0.7, required=False,
                     help='Temperture of time.')
 parser.add_argument('--finger_number', type=int, default=5, required=False,
                     help='Maximum number of notes play at the same time.')
+parser.add_argument('--alignment', type=int, default=0, required=False,
+                    help='Tick alignment.')
 
 args = parser.parse_args()
 tar_midi = args.output_midi_path
@@ -29,6 +31,7 @@ noteNum  = args.n
 temperature_note = args.note_temp
 temperature_delta = args.delta_temp
 finger_limit = args.finger_number
+align = args.alignment
 
 segLen=48
 track_num=2
@@ -78,6 +81,10 @@ def main():
         note = key  % maxrange
         inst = key // maxrange
         delta = 0 if i==0 else int(sample(pred_time[0], temperature_delta))
+        if align>1:
+            delta = int(round(delta/align)*align)
+            #delta //= align
+            #delta  *= align
         notes = np.roll(notes, -1, axis=1)
         deltas = np.roll(deltas, -1, axis=1)
         notes[0, segLen-1, :]=0 ## reset last event
