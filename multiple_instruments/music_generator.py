@@ -51,13 +51,13 @@ def main():
     global segLen, vecLen
     model = load_model('./multi.h5')
     output = midi.Pattern(resolution=16) ## reduce dimension of ticks...
-    track = [midi.Track() for _ in xrange(maxinst)]
-    for i in xrange(maxinst):
+    track = [midi.Track() for _ in xrange(track_num)]
+    for i in xrange(track_num):
         output.append(track[i])
     notes = np.zeros((1, segLen, vecLen))
     deltas = np.zeros((1, segLen, maxdelta))
-    last = np.zeros(maxinst)
-    for _ in xrange(maxinst):
+    last = np.zeros(track_num)
+    for _ in xrange(track_num):
         last[_] = -1
     tickAccum = 0
     for i in xrange(noteNum):
@@ -77,7 +77,7 @@ def main():
         key = int(sample(pred_note[0], temperature_note))
         note = key  % maxrange
         inst = key // maxrange
-        delta = int(sample(pred_time[0], temperature_delta))
+        delta = 0 if i==0 else int(sample(pred_time[0], temperature_delta))
         notes = np.roll(notes, -1, axis=1)
         deltas = np.roll(deltas, -1, axis=1)
         notes[0, segLen-1, :]=0 ## reset last event
@@ -101,7 +101,7 @@ def main():
         tickAccum += delta
         last[inst] = tickAccum
         print('processed: ', i+1, '/', noteNum)
-    for i in xrange(maxinst):
+    for i in xrange(track_num):
         track[i].append( midi.EndOfTrackEvent(tick=1) )
     midi.write_midifile(tar_midi, output)
 
