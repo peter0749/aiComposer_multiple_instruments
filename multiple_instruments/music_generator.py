@@ -26,6 +26,8 @@ parser.add_argument('--align_melody', type=int, default=4, required=False,
                     help='Main melody alignment.')
 parser.add_argument('--align_accompany', type=int, default=8, required=False,
                     help='Accompany alignment.')
+parser.add_argument('--bpm', type=float, default=120.0, required=False,
+                    help='Bpm (speed)')
 
 args = parser.parse_args()
 tar_midi = args.output_midi_path
@@ -35,6 +37,12 @@ temperature_delta = args.delta_temp
 finger_limit = args.finger_number
 align_right = args.align_melody
 align_left  = args.align_accompany
+
+bpm = args.bpm
+defaultBpm = 120.0
+speedRatio = bpm / defaultBpm
+defaultUnit = 500000
+changedSpeed= int(round(500000.0/speedRatio))
 
 segLen=48
 track_num=2
@@ -94,6 +102,7 @@ def main():
         deltas[0, segLen-1, :]=0 ## reset last event
         deltas[0, segLen-1, delta]=1 ## set predicted event
         if last[inst]==-1:
+            track[inst].append(midi.SetTempoEvent(tick=0, data=[(changedSpeed>>16) &0xff, (changedSpeed>>8) &0xff, changedSpeed &0xff]))
             track[inst].append(midi.ProgramChangeEvent(tick=0, data=[0], channel=0)) ## first event: program change to piano
             last[inst]=0
         diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
