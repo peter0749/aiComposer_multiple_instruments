@@ -100,8 +100,10 @@ def main():
         diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
         if align>1:
             new_reach = tickAccum+delta ## accum ticks before this event + this key plays after received signal?
-            new_reach = int(math.ceil(new_reach/align))*align
-            delta = new_reach - tickAccum ## aligned tick
+            if new_reach % align != 0: ## if not aligned
+                new_reach += align-(new_reach%align)
+            delta = min(32, max(0, new_reach - tickAccum)) ## aligned tick
+            print('%d: %d' % (inst,new_reach%align))
         ## note alignment:
         while diff>127:
             track[inst].append(midi.ControlChangeEvent(tick=127, channel=0, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
@@ -121,7 +123,7 @@ def main():
         deltas[0, segLen-1, delta]=1 ## set predicted event
         print('processed: ', i+1, '/', noteNum)
     for i in xrange(track_num):
-        track[i].append( midi.EndOfTrackEvent(tick=1) )
+        track[i].append( midi.EndOfTrackEvent(tick=0) )
     midi.write_midifile(tar_midi, output)
 
 if __name__ == "__main__":
