@@ -103,7 +103,7 @@ def main():
             if new_reach % align != 0: ## if not aligned
                 new_reach += align-(new_reach%align)
             delta = min(32, max(0, new_reach - tickAccum)) ## aligned tick
-            print('%d: %d' % (inst,new_reach%align))
+            #print('%d: %d' % (inst,new_reach%align))
         ## note alignment:
         while diff>127:
             track[inst].append(midi.ControlChangeEvent(tick=127, channel=0, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
