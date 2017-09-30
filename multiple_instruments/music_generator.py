@@ -107,9 +107,7 @@ def main():
         if zs>=limits[inst]: ## no more
             pred_time[0][0] = 1e-100
         note = int(sample(pred_note[0], temperature_note))
-        delta = 0 if i==0 else int(sample(pred_time[0], temperature_delta))
-        if align>1:
-            delta = int(round(delta/align)*align)
+        delta = int(sample(pred_time[0], temperature_delta))
         notes = np.roll(notes, -1, axis=1)
         deltas = np.roll(deltas, -1, axis=1)
         insts = np.roll(insts, -1, axis=1)
@@ -126,6 +124,11 @@ def main():
             track[inst].append(midi.ProgramChangeEvent(tick=0, data=[inst_code], channel=ch))
             last[inst]=0
         diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
+        if align>1:
+            new_reach = tickAccum+delta ## accum ticks before this event + this key plays after received signal?
+            if new_reach % align != 0: ## if not aligned
+                new_reach += align-(new_reach%align)
+            delta = min(32, max(0, new_reach - tickAccum)) ## aligned tick
 
         ## note alignment:
         while diff>127:
