@@ -91,22 +91,17 @@ def main():
         key = int(sample(pred_note[0], temperature_note))
         note = key  % maxrange
         inst = key // maxrange
-        delta = 0 if i==0 else int(sample(pred_time[0], temperature_delta))
+        delta = int(sample(pred_time[0], temperature_delta))
         align = align_right if inst==0 else align_left
-        if align>1:
-            delta = int(round(delta/align)*align)
-        notes = np.roll(notes, -1, axis=1)
-        deltas = np.roll(deltas, -1, axis=1)
-        notes[0, segLen-1, :]=0 ## reset last event
-        notes[0, segLen-1, key]=1 ## set predicted event
-        deltas[0, segLen-1, :]=0 ## reset last event
-        deltas[0, segLen-1, delta]=1 ## set predicted event
         if last[inst]==-1:
             track[inst].append(midi.SetTempoEvent(tick=0, data=[(changedSpeed>>16) &0xff, (changedSpeed>>8) &0xff, changedSpeed &0xff]))
             track[inst].append(midi.ProgramChangeEvent(tick=0, data=[0], channel=0)) ## first event: program change to piano
             last[inst]=0
         diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
-
+        if align>1:
+            new_reach = tickAccum+delta ## accum ticks before this event + this key plays after received signal?
+            new_reach = int(math.ceil(new_reach/align))*align
+            delta = new_reach - tickAccum ## aligned tick
         ## note alignment:
         while diff>127:
             track[inst].append(midi.ControlChangeEvent(tick=127, channel=0, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
@@ -118,6 +113,12 @@ def main():
         track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), 127]))
         tickAccum += delta
         last[inst] = tickAccum
+        notes = np.roll(notes, -1, axis=1)
+        deltas = np.roll(deltas, -1, axis=1)
+        notes[0, segLen-1, :]=0 ## reset last event
+        notes[0, segLen-1, key]=1 ## set predicted event
+        deltas[0, segLen-1, :]=0 ## reset last event
+        deltas[0, segLen-1, delta]=1 ## set predicted event
         print('processed: ', i+1, '/', noteNum)
     for i in xrange(track_num):
         track[i].append( midi.EndOfTrackEvent(tick=1) )
