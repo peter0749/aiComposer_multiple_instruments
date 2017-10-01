@@ -115,8 +115,6 @@ def main():
         key = int(sample(pred_note[0], temperature_note, temperature_sd))
         note = key  % maxrange
         inst = key // maxrange
-        sleepy += align_right if inst==0 else -align_left
-        #print('sleepy: %d' % sleepy)
         delta = int(sample(pred_time[0], temperature_delta, temperature_sd))
         align = align_right if inst==0 else align_left
         if last[inst]==-1:
@@ -161,6 +159,8 @@ def main():
                     notes[0, t-1, rn] = 1
                 elif i>=segLen*2: break
             #print([np.where(r==1)[0][0] for r in notes[0]])
+        #if delta>0: ## ignore effect of multiple keys
+        sleepy += align_right if inst==0 else -align_left ## compute score, more notes on sheet -> more active
         print('processed: ', i+1, '/', noteNum)
     for i in xrange(track_num):
         track[i].append( midi.EndOfTrackEvent(tick=0) )
