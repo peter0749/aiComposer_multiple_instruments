@@ -108,14 +108,14 @@ def main():
             if zs>=finger_limit: ## no more fingers
                 pred_time[0][0] = 1e-100
         if wake_up>0: ## check if a track fell asleep
-            if sleepy>0 and sleepy*align_right>=wake_up_w:
+            if sleepy>0 and sleepy>=wake_up_w:
                 pred_note[0][:maxrange] = 1e-100
-            elif sleepy<0 and -sleepy*align_left>=wake_up_w:
+            elif sleepy<0 and -sleepy>=wake_up_w:
                 pred_note[0][maxrange:] = 1e-100
         key = int(sample(pred_note[0], temperature_note, temperature_sd))
         note = key  % maxrange
         inst = key // maxrange
-        sleepy += 1 if inst==0 else -1
+        sleepy += align_right if inst==0 else -align_left
         #print('sleepy: %d' % sleepy)
         delta = int(sample(pred_time[0], temperature_delta, temperature_sd))
         align = align_right if inst==0 else align_left
