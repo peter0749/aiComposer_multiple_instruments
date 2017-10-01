@@ -20,6 +20,8 @@ parser.add_argument('--note_temp', type=float, default=0.7, required=False,
                     help='Temperture of notes.')
 parser.add_argument('--delta_temp', type=float, default=0.7, required=False,
                     help='Temperture of time.')
+parser.add_argument('--temp_sd', type=float, default=0.05, required=False,
+                    help='Standard deviation of temperture.')
 parser.add_argument('--finger_number', type=int, default=5, required=False,
                     help='Maximum number of notes play at the same time.')
 parser.add_argument('--align_melody', type=int, default=4, required=False,
@@ -36,6 +38,7 @@ tar_midi = args.output_midi_path
 noteNum  = args.n
 temperature_note = args.note_temp
 temperature_delta = args.delta_temp
+temperature_sd = args.temp_sd
 finger_limit = args.finger_number
 align_right = args.align_melody
 align_left  = args.align_accompany
@@ -54,8 +57,8 @@ maxrange=60 #[36, 95]
 vecLen=maxrange*track_num
 maxdelta=33 #[0, 32]
 
-def sample(preds, temperature=1.0):
-    temperature += np.random.randn()*0.1 ## add some noise
+def sample(preds, temperature=1.0, temperature_sd=0.05):
+    temperature += np.random.randn()*temperature_sd ## add some noise
     #print('temp: %.2f' % temperature)
     if temperature < 1e-9:
         return np.argmax(preds)
@@ -100,12 +103,12 @@ def main():
                 pred_note[0][:maxrange] = 1e-100
             elif sleepy<0 and -sleepy*align_left>=wake_up_w:
                 pred_note[0][maxrange:] = 1e-100
-        key = int(sample(pred_note[0], temperature_note))
+        key = int(sample(pred_note[0], temperature_note, temperature_sd))
         note = key  % maxrange
         inst = key // maxrange
         sleepy += 1 if inst==0 else -1
         #print('sleepy: %d' % sleepy)
-        delta = int(sample(pred_time[0], temperature_delta))
+        delta = int(sample(pred_time[0], temperature_delta, temperature_sd))
         align = align_right if inst==0 else align_left
         if last[inst]==-1:
             track[inst].append(midi.SetTempoEvent(tick=0, data=[(changedSpeed>>16) &0xff, (changedSpeed>>8) &0xff, changedSpeed &0xff]))
