@@ -1,6 +1,4 @@
 from __future__ import print_function
-import keras
-from keras.models import Sequential, load_model
 import numpy as np
 import random
 import sys
@@ -32,6 +30,10 @@ parser.add_argument('--bpm', type=float, default=120.0, required=False,
                     help='Bpm (speed)')
 parser.add_argument('--wake_up', type=int, default=0, required=False,
                     help='Wake up one of the tracks if it fell asleep...')
+parser.add_argument('--do_format', action='store_true', default=False,
+                    help='Format data before sending into model...')
+parser.add_argument('--debug', action='store_true', default=False,
+                    help='Fix random seed')
 
 args = parser.parse_args()
 tar_midi = args.output_midi_path
@@ -44,6 +46,10 @@ align_right = args.align_melody
 align_left  = args.align_accompany
 wake_up = args.wake_up
 wake_up_w = wake_up*(align_left+align_right) ## threshold
+do_format = args.do_format
+
+if args.debug:
+    np.random.seed(7) ## for debugging
 
 bpm = args.bpm
 defaultBpm = 120.0
@@ -56,6 +62,9 @@ track_num=2
 maxrange=60 #[36, 95]
 vecLen=maxrange*track_num
 maxdelta=33 #[0, 32]
+
+import keras
+from keras.models import Sequential, load_model
 
 def sample(preds, temperature=1.0, temperature_sd=0.05):
     temperature += np.random.randn()*temperature_sd ## add some noise
@@ -138,6 +147,20 @@ def main():
         notes[0, segLen-1, key]=1 ## set predicted event
         deltas[0, segLen-1, :]=0 ## reset last event
         deltas[0, segLen-1, delta]=1 ## set predicted event
+        if i>=segLen and do_format:
+            for t in reversed(range(1, segLen)):
+                rd = np.where(deltas[0, t]==1)[0][0] ## right delta
+                rn = np.where(notes[0, t]==1)[0][0] ## right note
+                ld = np.where(deltas[0, t-1]==1)[0][0] ## left ..
+                ln = np.where(notes[0, t-1]==1)[0][0]
+                if rd!=0: break
+                if ln>rn: ## swap
+                    #print('swapped: %d %d' % (ln, rn))
+                    notes[0, t-1:t+1, :] = 0 ## t-1, t
+                    notes[0, t, ln] = 1
+                    notes[0, t-1, rn] = 1
+                elif i>=segLen*2: break
+            #print([np.where(r==1)[0][0] for r in notes[0]])
         print('processed: ', i+1, '/', noteNum)
     for i in xrange(track_num):
         track[i].append( midi.EndOfTrackEvent(tick=0) )
