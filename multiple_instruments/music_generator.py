@@ -7,6 +7,7 @@ import math
 import h5py
 import os.path
 import argparse
+from fractions import gcd
 
 parser = argparse.ArgumentParser(description='Music Generation with Mutiple Instruments')
 
@@ -44,8 +45,10 @@ temperature_sd = args.temp_sd
 finger_limit = args.finger_number
 align_right = args.align_melody
 align_left  = args.align_accompany
+gcd_align = gcd(align_right, align_left)
+lcm_align = align_right//gcd_align * align_left
 wake_up = args.wake_up
-wake_up_w = wake_up*(align_left+align_right) ## threshold
+wake_up_w = wake_up*lcm_align ## threshold
 do_format = args.do_format
 
 if args.debug:
