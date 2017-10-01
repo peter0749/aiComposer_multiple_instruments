@@ -20,7 +20,7 @@ parser.add_argument('--note_temp', type=float, default=0.7, required=False,
                     help='Temperture of notes.')
 parser.add_argument('--delta_temp', type=float, default=0.7, required=False,
                     help='Temperture of time.')
-parser.add_argument('--temp_sd', type=float, default=0.05, required=False,
+parser.add_argument('--temp_sd', type=float, default=0.01, required=False,
                     help='Standard deviation of temperture.')
 parser.add_argument('--finger_number', type=int, default=5, required=False,
                     help='Maximum number of notes play at the same time.')
