@@ -56,7 +56,7 @@ maxdelta=33 #[0, 32]
 
 def sample(preds, temperature=1.0):
     temperature += np.random.randn()*0.1 ## add some noise
-    print('temp: %.2f' % temperature)
+    #print('temp: %.2f' % temperature)
     if temperature < 1e-9:
         return np.argmax(preds)
     preds = np.asarray(preds).astype('float64')
@@ -135,7 +135,7 @@ def main():
         notes[0, segLen-1, key]=1 ## set predicted event
         deltas[0, segLen-1, :]=0 ## reset last event
         deltas[0, segLen-1, delta]=1 ## set predicted event
-        #print('processed: ', i+1, '/', noteNum)
+        print('processed: ', i+1, '/', noteNum)
     for i in xrange(track_num):
         track[i].append( midi.EndOfTrackEvent(tick=0) )
     midi.write_midifile(tar_midi, output)
