@@ -55,6 +55,8 @@ vecLen=maxrange*track_num
 maxdelta=33 #[0, 32]
 
 def sample(preds, temperature=1.0):
+    temperature += np.random.randn()*0.1 ## add some noise
+    print('temp: %.2f' % temperature)
     if temperature < 1e-9:
         return np.argmax(preds)
     preds = np.asarray(preds).astype('float64')
@@ -102,6 +104,7 @@ def main():
         note = key  % maxrange
         inst = key // maxrange
         sleepy += 1 if inst==0 else -1
+        #print('sleepy: %d' % sleepy)
         delta = int(sample(pred_time[0], temperature_delta))
         align = align_right if inst==0 else align_left
         if last[inst]==-1:
@@ -132,7 +135,7 @@ def main():
         notes[0, segLen-1, key]=1 ## set predicted event
         deltas[0, segLen-1, :]=0 ## reset last event
         deltas[0, segLen-1, delta]=1 ## set predicted event
-        print('processed: ', i+1, '/', noteNum)
+        #print('processed: ', i+1, '/', noteNum)
     for i in xrange(track_num):
         track[i].append( midi.EndOfTrackEvent(tick=0) )
     midi.write_midifile(tar_midi, output)
