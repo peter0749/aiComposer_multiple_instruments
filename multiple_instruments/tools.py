@@ -39,6 +39,7 @@ def Tempo2BPM(x):
 def pattern2map(pattern, maxtick):
     ResScale = float(pattern.resolution) / float(defaultRes)
     instrument = -1
+    firstTempo = True
     data=[(0.0,0)]#tick , key (main+accompany)
     for track in pattern: ## main melody if instrument==0 else accompany
         if instrument==1: break ## if main & accompany is set, then break.
@@ -51,6 +52,10 @@ def pattern2map(pattern, maxtick):
                 accumTick = accumTick + float(v.tick)/speedRatio
             if isinstance(v, midi.SetTempoEvent):
                 changeBPM = Tempo2BPM(v)
+                if firstTempo:
+                    defaultRes = changeBPM
+                    firstTempo = False
+                    continue
                 speedRatio = float(changeBPM)/float(Normal)
             elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
                 if not noteOnDetected: instrument+=1
