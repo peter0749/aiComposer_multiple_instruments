@@ -85,12 +85,14 @@ def sample(preds, temperature=1.0, temperature_sd=0.05):
 def main():
     global segLen, vecLen
     model = load_model('./multi.h5')
+    seed = np.load('./seed.npy')
+    seedIdx = np.random.randint(len(seed['notes']))
     output = midi.Pattern(resolution=16) ## reduce dimension of ticks...
     track = [midi.Track() for _ in xrange(track_num)]
     for i in xrange(track_num):
         output.append(track[i])
-    notes = np.zeros((1, segLen, vecLen))
-    deltas = np.zeros((1, segLen, maxdelta))
+    notes = seed['notes'][seedIdx]
+    deltas = seed['times'][seedIdx]
     last = np.zeros(track_num)
     for _ in xrange(track_num):
         last[_] = -1
