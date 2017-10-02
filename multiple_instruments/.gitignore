@@ -6,4 +6,5 @@
 *.midi
 *.MIDI
 *.npy
+*.npz
 *.csv
