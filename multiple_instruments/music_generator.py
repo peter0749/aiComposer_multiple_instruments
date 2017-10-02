@@ -95,6 +95,7 @@ def main():
     deltas = np.zeros((1, segLen, maxdelta))
     notes[:,:,:] = seed['notes'][seedIdx,:,:]
     deltas[:,:,:] = seed['times'][seedIdx,:,:]
+    seed = None ## release
     last = np.zeros(track_num)
     for _ in xrange(track_num):
         last[_] = -1
