@@ -14,7 +14,6 @@ track_num=2
 maxrange=60 ## [36, 95]
 vecLen=maxrange*track_num
 maxdelta=33 ## [0, 32]
-Normal=120.0
 defaultRes=16.0
 
 # Sorted x
@@ -45,6 +44,7 @@ def pattern2map(pattern, maxtick):
         if instrument==1: break ## if main & accompany is set, then break.
         temp=[(0.0,0)] #tick, note, instrument
         speedRatio = 1.0
+        Normal = 120.0
         accumTick = 0.
         noteOnDetected = False
         for v in track:
@@ -53,7 +53,7 @@ def pattern2map(pattern, maxtick):
             if isinstance(v, midi.SetTempoEvent):
                 changeBPM = Tempo2BPM(v)
                 if firstTempo:
-                    defaultRes = changeBPM
+                    Normal = changeBPM
                     firstTempo = False
                     continue
                 speedRatio = float(changeBPM)/float(Normal)
