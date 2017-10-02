@@ -35,7 +35,7 @@ def main():
         else:
             notes = np.append(notes, note, axis=0)
             times = np.append(times, time, axis=0)
-    np.save("seed.npy",{'notes':notes, 'times':times})
+    np.savez("seed.npz", notes=notes, times=times)
 
 if __name__ == "__main__":
     main()
