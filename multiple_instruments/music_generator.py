@@ -152,7 +152,7 @@ def main():
         notes[0, segLen-1, key]=1 ## set predicted event
         deltas[0, segLen-1, :]=0 ## reset last event
         deltas[0, segLen-1, delta]=1 ## set predicted event
-        if i>=segLen and do_format:
+        if do_format:
             for t in reversed(range(1, segLen)):
                 rd = np.where(deltas[0, t]==1)[0][0] ## right delta
                 rn = np.where(notes[0, t]==1)[0][0] ## right note
@@ -160,13 +160,10 @@ def main():
                 ln = np.where(notes[0, t-1]==1)[0][0]
                 if rd!=0: break
                 if ln>rn: ## swap
-                    #print('swapped: %d %d' % (ln, rn))
                     notes[0, t-1:t+1, :] = 0 ## t-1, t
                     notes[0, t, ln] = 1
                     notes[0, t-1, rn] = 1
-                elif i>=segLen*2: break
-            #print([np.where(r==1)[0][0] for r in notes[0]])
-        #if delta>0: ## ignore effect of multiple keys
+                else: break
         sleepy += align_right if inst==0 else -align_left ## compute score, more notes on sheet -> more active
         print('processed: ', i+1, '/', noteNum)
     for i in xrange(track_num):
