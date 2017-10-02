@@ -17,6 +17,7 @@ import math
 import h5py
 import os.path
 import argparse
+from tools import *
 
 parser = argparse.ArgumentParser(description='Music Generation with Mutiple Instruments (training)')
 parser.add_argument('train_dir', metavar='training', type=str,
@@ -74,84 +75,6 @@ Normal=120.0
 defaultRes=16.0
 
 K.set_floatx(compute_precision)
-
-# Sorted x
-def purge(x):
-    y = [x[-1]] #pick last element
-    i = len(x)-2 # iterate over all set in reversed order
-    while i>=0:
-        while i>=0 and x[i][1] == y[-1][1] and x[i][2] == y[-1][2]: ## overlapped, find next different note
-            i -= 1
-        if i>=0: ## founded
-            y.append(x[i])
-        i -= 1
-    return list(reversed(y))
-# merge some overlaped intervals into single interval
-
-def Tempo2BPM(x):
-    ret = x.data[2] | x.data[1]<<8 | x.data[0]<<16
-    ret = float(60000000)/float(ret)
-    return ret
-## merge all tracks into one track
-
-def pattern2map(pattern, maxtick):
-    ResScale = float(pattern.resolution) / float(defaultRes)
-    instrument = -1
-    data=[(0.0,0)]#tick , key (main+accompany)
-    for track in pattern: ## main melody if instrument==0 else accompany
-        if instrument==1: break ## if main & accompany is set, then break.
-        temp=[(0.0,0)] #tick, note, instrument
-        speedRatio = 1.0
-        accumTick = 0.
-        noteOnDetected = False
-        for v in track:
-            if hasattr(v, 'tick') :
-                accumTick = accumTick + float(v.tick)/speedRatio
-            if isinstance(v, midi.SetTempoEvent):
-                changeBPM = Tempo2BPM(v)
-                speedRatio = float(changeBPM)/float(Normal)
-            elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
-                if not noteOnDetected: instrument+=1
-                noteOnDetected = True
-                note = (v.data[0]-36)+instrument*maxrange
-                temp.append((accumTick, note, instrument))
-        temp = temp[1:-1]
-        data.extend(temp)
-    data = list(set(data)) ## remove duplicate data
-    data.sort()
-    data = purge(data)
-    for i in range(0, len(data)-1):
-        tick = data[i+1][0] - data[i][0]
-        tick = int(round(tick/ResScale)) ## adjust resolution, downsampling
-        tick = maxtick if tick>maxtick else tick ## set a threshold
-        note = data[i+1][1]
-        inst = data[i+1][2]
-        data[i] = (tick,note,inst)
-    data = data[0:-2] ## data must have two elements. ow crashs
-    return data
-
-def makeSegment(data, maxlen, step):
-    sentences = []
-    nextseq = []
-    for i in xrange(0, len(data) - maxlen, step):
-        sentences.append(data[i: i + maxlen])
-        nextseq.append(data[i + maxlen])
-    randIdx = np.random.permutation(len(sentences))
-    return np.array(sentences)[randIdx], np.array(nextseq)[randIdx]
-
-def seg2vec(segment, nextseg, segLen, vecLen, maxdelta):
-    notes = np.zeros((len(segment), segLen, vecLen), dtype=np.bool)
-    times = np.zeros((len(segment), segLen, maxdelta), dtype=np.bool)
-
-    notes_n = np.zeros((len(segment), vecLen), dtype=np.bool)
-    times_n = np.zeros((len(segment), maxdelta), dtype=np.bool)
-    for i, seg in enumerate(segment):
-        for t, note in enumerate(seg):
-            times[i, t, int(note[0])] = 1
-            notes[i, t, int(note[1])] = 1
-        times_n[i, int(nextseg[i][0])] = 1
-        notes_n[i, int(nextseg[i][1])] = 1
-    return notes, times, notes_n, times_n
 
 def generator(path_name, step_size, batch_size, train_what=''):
     while True:
