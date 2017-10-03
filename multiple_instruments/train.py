@@ -78,7 +78,6 @@ hidden_inst=256
 filter_size=128
 kernel_size=3 ## midi program changes are by groups
 drop_rate=0.2 ## for powerful computer
-Normal=120.0
 defaultRes=16.0
 
 K.set_floatx(compute_precision)
@@ -126,6 +125,8 @@ def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
         temp=[(0.0,0,0)] #tick, note, instrument, power
         speedRatio = 1.0
         accumTick = 0.
+        Normal = 120.0
+        firstTempo = True
         instrument = 46 # sets to piano by default
         for v in track:
             if hasattr(v, 'tick') :
@@ -139,6 +140,10 @@ def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
                     break
             elif isinstance(v, midi.SetTempoEvent):
                 changeBPM = Tempo2BPM(v)
+                if firstTempo:
+                    firstTempo = False
+                    Normal = changeBPM
+                    continue
                 speedRatio = float(changeBPM)/float(Normal)
             elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
                 note = v.data[0]-36
@@ -167,6 +172,8 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
     for track in pattern:
         temp=[(0.0,0,0)] #tick, note, instrument, power
         speedRatio = 1.0
+        Normal = 120.0
+        firstTempo = True
         accumTick = 0.
         for v in track:
             if hasattr(v, 'tick') :
@@ -179,6 +186,10 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
                 ch2ins[v.channel] = instrument
             elif isinstance(v, midi.SetTempoEvent):
                 changeBPM = Tempo2BPM(v)
+                if firstTempo:
+                    firstTempo = False
+                    Normal = changeBPM
+                    continue
                 speedRatio = float(changeBPM)/float(Normal)
             elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
                 ch = v.channel
