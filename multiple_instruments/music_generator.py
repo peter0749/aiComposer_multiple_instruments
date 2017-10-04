@@ -35,6 +35,8 @@ parser.add_argument('--do_format', action='store_true', default=False,
                     help='Format data before sending into model...')
 parser.add_argument('--debug', action='store_true', default=False,
                     help='Fix random seed')
+parser.add_argument('--sticky', action='store_true', default=False,
+                    help='')
 
 args = parser.parse_args()
 tar_midi = args.output_midi_path
@@ -144,6 +146,16 @@ def main():
             track[inst].append(midi.ControlChangeEvent(tick=diff, channel=0, data=[3, 0])) ## append 'foo' event
 
         ## note on:
+        if args.sticky:
+            findLastNoteOn = -1
+            for t in reversed(range(len(track[inst]))):
+                if isinstance(track[inst][t], midi.NoteOffEvent):
+                    break
+                elif isinstance(track[inst][t], midi.NoteOnEvent):
+                    findLastNoteOn = track[inst][t].data[0]
+                    break
+            if findLastNoteOn!=-1:
+                track[inst].append(midi.NoteOffEvent(tick=0, data=[ findLastNoteOn, 0]))
         track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), 127]))
         tickAccum += delta
         last[inst] = tickAccum
