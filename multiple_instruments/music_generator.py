@@ -1,6 +1,4 @@
 from __future__ import print_function
-import keras
-from keras.models import Sequential, load_model
 import numpy as np
 import random
 import sys
@@ -9,6 +7,7 @@ import math
 import h5py
 import os.path
 import argparse
+from fractions import gcd
 
 parser = argparse.ArgumentParser(description='Music Generation with Mutiple Instruments')
 
@@ -20,29 +19,59 @@ parser.add_argument('--note_temp', type=float, default=0.7, required=False,
                     help='Temperture of notes.')
 parser.add_argument('--delta_temp', type=float, default=0.7, required=False,
                     help='Temperture of time.')
-parser.add_argument('--inst_temp', type=float, default=0.7, required=False,
-                    help='Temperture of instruments.')
+parser.add_argument('--temp_sd', type=float, default=0.01, required=False,
+                    help='Standard deviation of temperture.')
 parser.add_argument('--finger_number', type=int, default=5, required=False,
                     help='Maximum number of notes play at the same time.')
-parser.add_argument('--no_drum', action='store_true', default=False,
-                    help='No drums.')
+parser.add_argument('--align_melody', type=int, default=4, required=False,
+                    help='Main melody alignment.')
+parser.add_argument('--align_accompany', type=int, default=8, required=False,
+                    help='Accompany alignment.')
+parser.add_argument('--bpm', type=float, default=120.0, required=False,
+                    help='Bpm (speed)')
+parser.add_argument('--wake_up', type=int, default=0, required=False,
+                    help='Wake up one of the tracks if it fell asleep...')
+parser.add_argument('--do_format', action='store_true', default=False,
+                    help='Format data before sending into model...')
+parser.add_argument('--debug', action='store_true', default=False,
+                    help='Fix random seed')
 
 args = parser.parse_args()
 tar_midi = args.output_midi_path
 noteNum  = args.n
 temperature_note = args.note_temp
 temperature_delta = args.delta_temp
-temperature_inst = args.inst_temp
+temperature_sd = args.temp_sd
 finger_limit = args.finger_number
-no_drum = args.no_drum
+align_right = args.align_melody
+align_left  = args.align_accompany
+gcd_align = gcd(align_right, align_left)
+lcm_align = align_right//gcd_align * align_left
+wake_up = args.wake_up
+wake_up_w = wake_up*lcm_align ## threshold
+do_format = args.do_format
+
+if args.debug:
+    np.random.seed(7) ## for debugging
+
+bpm = args.bpm
+defaultBpm = 120.0
+speedRatio = bpm / defaultBpm
+defaultUnit = 500000
+changedSpeed= int(round(500000.0/speedRatio))
 
 segLen=48
-vecLen=88 #[0, 87]
-maxdelta=128
-maxpower=64
-maxinst =129
+track_num=2
+maxrange=60 #[36, 95]
+vecLen=maxrange*track_num
+maxdelta=33 #[0, 32]
 
-def sample(preds, temperature=1.0):
+import keras
+from keras.models import Sequential, load_model
+
+def sample(preds, temperature=1.0, temperature_sd=0.05):
+    temperature += np.random.randn()*temperature_sd ## add some noise
+    #print('temp: %.2f' % temperature)
     if temperature < 1e-9:
         return np.argmax(preds)
     preds = np.asarray(preds).astype('float64')
@@ -56,68 +85,90 @@ def sample(preds, temperature=1.0):
 def main():
     global segLen, vecLen
     model = load_model('./multi.h5')
-    output = midi.Pattern(resolution=256)
-    track = [midi.Track() for _ in xrange(maxinst)]
-    for i in xrange(maxinst):
+    seed = np.load('./seed.npz')
+    seedIdx = np.random.randint(len(seed['notes']))
+    output = midi.Pattern(resolution=16) ## reduce dimension of ticks...
+    track = [midi.Track() for _ in xrange(track_num)]
+    for i in xrange(track_num):
         output.append(track[i])
     notes = np.zeros((1, segLen, vecLen))
     deltas = np.zeros((1, segLen, maxdelta))
-    insts = np.zeros((1, segLen, maxinst))
-    last = np.zeros(maxinst)
-    for _ in xrange(maxinst):
+    notes[:,:,:] = seed['notes'][seedIdx,:,:]
+    deltas[:,:,:] = seed['times'][seedIdx,:,:]
+    seed = None ## release
+    last = np.zeros(track_num)
+    for _ in xrange(track_num):
         last[_] = -1
     tickAccum = 0
+    sleepy = 0 ## to measure sleepiness !?!?
     for i in xrange(noteNum):
-        pred_note, pred_time, pred_inst, pred_power = model.predict([notes, deltas, insts], batch_size=1, verbose=0)
-        if no_drum:
-            pred_inst[0][128] = 1e-100
-        inst = int(sample(pred_inst[0], temperature_inst))
-        zs = 1 ## how many notes play at the same time? self += 1
-        for t in reversed(range(len(track[inst]))): ## this limits # of notes play at the same time
-            if hasattr(track[inst][t], 'tick'):
-                if isinstance(track[inst][t], midi.NoteOnEvent):
-                    pred_note[0][track[inst][t].data[0]-21] = 1e-100
-                if track[inst][t].tick==0:
-                    zs += 1 ## others
-                else:
-                    break
-        if zs>=finger_limit: ## no more fingers
-            pred_time[0][0] = 1e-100
-        note = int(sample(pred_note[0], temperature_note))
-        delta = int(sample(pred_time[0], temperature_delta))
-        notes = np.roll(notes, -1, axis=1)
-        deltas = np.roll(deltas, -1, axis=1)
-        insts = np.roll(insts, -1, axis=1)
-        notes[0, segLen-1, :]=0 ## reset last event
-        notes[0, segLen-1, note]=1 ## set predicted event
-        deltas[0, segLen-1, :]=0 ## reset last event
-        deltas[0, segLen-1, delta]=1 ## set predicted event
-        insts[0, segLen-1, :]=0
-        insts[0, segLen-1, inst]=1
-        ch = 9 if inst==128 else 1
-        inst_code = 0 if inst==128 else inst
+        pred_note, pred_time = model.predict([notes, deltas], batch_size=1, verbose=0)
+        for inst in xrange(track_num):
+            zs = 1 ## how many notes play at the same time? self += 1
+            for t in reversed(range(len(track[inst]))): ## this limits # of notes play at the same time
+                if hasattr(track[inst][t], 'tick'):
+                    if isinstance(track[inst][t], midi.NoteOnEvent):
+                        pred_note[0][(track[inst][t].data[0]-36)+inst*maxrange] = 1e-100
+                    if track[inst][t].tick==0:
+                        zs += 1 ## others
+                    else:
+                        break
+            if zs>=finger_limit: ## no more fingers
+                pred_time[0][0] = 1e-100
+        if wake_up>0: ## check if a track fell asleep
+            if sleepy>0 and sleepy>=wake_up_w:
+                pred_note[0][:maxrange] = 1e-100
+            elif sleepy<0 and -sleepy>=wake_up_w:
+                pred_note[0][maxrange:] = 1e-100
+        key = int(sample(pred_note[0], temperature_note, temperature_sd))
+        note = key  % maxrange
+        inst = key // maxrange
+        delta = int(sample(pred_time[0], temperature_delta, temperature_sd))
+        align = align_right if inst==0 else align_left
         if last[inst]==-1:
-            track[inst].append(midi.ProgramChangeEvent(tick=0, data=[inst_code], channel=ch))
+            track[inst].append(midi.SetTempoEvent(tick=0, data=[(changedSpeed>>16) &0xff, (changedSpeed>>8) &0xff, changedSpeed &0xff]))
+            track[inst].append(midi.ProgramChangeEvent(tick=0, data=[0], channel=0)) ## first event: program change to piano
             last[inst]=0
         diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
-        power = (pred_power[0]+1)*2
-        power = 127 if power>127 else power
-        power = 1 if power<1 else power
-
+        if align>1:
+            new_reach = tickAccum+delta ## accum ticks before this event + this key plays after received signal?
+            if new_reach % align != 0: ## if not aligned
+                new_reach += align-(new_reach%align)
+            delta = min(32, max(0, new_reach - tickAccum)) ## aligned tick
+            #print('%d: %d' % (inst,new_reach%align))
         ## note alignment:
         while diff>127:
-            track[inst].append(midi.ControlChangeEvent(tick=127, channel=ch, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
+            track[inst].append(midi.ControlChangeEvent(tick=127, channel=0, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
             diff-=127
         if diff>0:
-            track[inst].append(midi.ControlChangeEvent(tick=diff, channel=ch, data=[3, 0])) ## append 'foo' event
+            track[inst].append(midi.ControlChangeEvent(tick=diff, channel=0, data=[3, 0])) ## append 'foo' event
 
         ## note on:
-        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+21), int(power)]))
+        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), 127]))
         tickAccum += delta
         last[inst] = tickAccum
+        notes = np.roll(notes, -1, axis=1)
+        deltas = np.roll(deltas, -1, axis=1)
+        notes[0, segLen-1, :]=0 ## reset last event
+        notes[0, segLen-1, key]=1 ## set predicted event
+        deltas[0, segLen-1, :]=0 ## reset last event
+        deltas[0, segLen-1, delta]=1 ## set predicted event
+        if do_format:
+            for t in reversed(range(1, segLen)):
+                rd = np.where(deltas[0, t]==1)[0][0] ## right delta
+                rn = np.where(notes[0, t]==1)[0][0] ## right note
+                ld = np.where(deltas[0, t-1]==1)[0][0] ## left ..
+                ln = np.where(notes[0, t-1]==1)[0][0]
+                if rd!=0: break
+                if ln>rn: ## swap
+                    notes[0, t-1:t+1, :] = 0 ## t-1, t
+                    notes[0, t, ln] = 1
+                    notes[0, t-1, rn] = 1
+                else: break
+        sleepy += align_right if inst==0 else -align_left ## compute score, more notes on sheet -> more active
         print('processed: ', i+1, '/', noteNum)
-    for i in xrange(maxinst):
-        track[i].append( midi.EndOfTrackEvent(tick=1) )
+    for i in xrange(track_num):
+        track[i].append( midi.EndOfTrackEvent(tick=0) )
     midi.write_midifile(tar_midi, output)
 
 if __name__ == "__main__":
