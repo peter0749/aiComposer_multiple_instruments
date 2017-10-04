@@ -178,6 +178,8 @@ def main():
         sleepy += align_right if inst==0 else -align_left ## compute score, more notes on sheet -> more active
         print('processed: ', i+1, '/', noteNum)
     for i in xrange(track_num):
+        if args.sticky and len(track[i])>0 and isinstance(track[i][-1], midi.NoteOnEvent):
+            track[i].append(midi.NoteOffEvent(tick=0, data=[ track[i][-1].data[0], 0]))
         track[i].append( midi.EndOfTrackEvent(tick=0) )
     midi.write_midifile(tar_midi, output)
 
