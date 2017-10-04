@@ -147,15 +147,13 @@ def main():
 
         ## note on:
         if args.sticky:
-            findLastNoteOn = -1
             for t in reversed(range(len(track[inst]))):
                 if isinstance(track[inst][t], midi.NoteOffEvent):
                     break
                 elif isinstance(track[inst][t], midi.NoteOnEvent):
                     findLastNoteOn = track[inst][t].data[0]
+                    track[inst].append(midi.NoteOffEvent(tick=0, data=[ findLastNoteOn, 0]))
                     break
-            if findLastNoteOn!=-1:
-                track[inst].append(midi.NoteOffEvent(tick=0, data=[ findLastNoteOn, 0]))
         track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), 127]))
         tickAccum += delta
         last[inst] = tickAccum
