@@ -2,7 +2,7 @@ from __future__ import print_function
 import os
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
-from keras.layers import LSTM, GRU, BatchNormalization, RepeatVector, TimeDistributed
+from keras.layers import LSTM, LSTM, BatchNormalization, RepeatVector, TimeDistributed
 from keras.layers.merge import concatenate
 from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
@@ -115,21 +115,21 @@ def generator(path_name, step_size, batch_size, train_what=''):
 
 def main():
     # network:
-    # build the model: stacked GRUs
+    # build the model: stacked LSTMs
     print('Build model...')
     # network:
     noteInput  = Input(shape=(segLen, vecLen))
-    noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteInput)
-    noteEncode = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteEncode)
+    noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteInput)
+    noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteEncode)
 
     deltaInput = Input(shape=(segLen, maxdelta))
-    deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaInput)
-    deltaEncode = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaEncode)
+    deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaInput)
+    deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaEncode)
 
     codec = concatenate([noteEncode, deltaEncode], axis=-1) ## return last state
-    codec = SoftAttentionBlock(codec, segLen, 256, trainable=train_att)
-    codec = LSTM(256, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
-    codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
+    codec = SoftAttentionBlock(codec, segLen, hidden_note+hidden_delta, trainable=train_att)
+    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
+    codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_notes = BatchNormalization(trainable=train_note)(encoded)
