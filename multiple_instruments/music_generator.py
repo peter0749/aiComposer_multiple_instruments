@@ -102,14 +102,16 @@ def main():
                     break
         if zs>=finger_limit: ## no more fingers
             pred_time[0][0] = 1e-100
-        if note-24<0:
-            pred_note[0][:(24-note)] = 1e-100
-        elif note+24>127: ## 127-note<24
-            pred_note[0][(127-note-24+vecLen):] = 1e-100
+        if note-24<36:
+            skip = min(24-note+36, 24)
+            pred_note[0][:skip] = 1e-100
+        elif note+24>95: ## 127-note<24
+            skip = max(95-note-24+vecLen, 25)
+            pred_note[0][skip:] = 1e-100
         key =  int(sample(pred_note[0], temperature_note, temperature_sd)) ## [-24~+24]
         note += (key-24)
-        while note<0: note+=12
-        while note>127: note-=12
+        while note<36: note+=12
+        while note>95: note-=12
         delta = int(sample(pred_time[0], temperature_delta, temperature_sd))
         if align>1:
             new_reach = tickAccum+delta ## accum ticks before this event + this key plays after received signal?
