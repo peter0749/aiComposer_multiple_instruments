@@ -12,9 +12,7 @@ from tools import *
 
 step_size=1
 segLen=48
-track_num=2
-maxrange=60 ## [36, 95]
-vecLen=maxrange*track_num
+vecLen=49
 maxdelta=33 ## [0, 32]
 Normal=120.0
 defaultRes=16.0
@@ -25,10 +23,13 @@ def main():
     seedDir = str(sys.argv[1])
     fileDir = os.listdir(str(seedDir))
     for filename in fileDir:
-        fullfile = str(seedDir)+'/'+str(filename)
-        pattern = midi.read_midifile(fullfile)
-        data = pattern2map(pattern,maxdelta-1)
-        note, time = firstState(data, segLen)
+        try:
+            fullfile = str(seedDir)+'/'+str(filename)
+            pattern = midi.read_midifile(fullfile)
+            data = pattern2map(pattern,maxdelta-1)
+            note, time = firstState(data, segLen)
+        except:
+            continue
         if notes is None or times is None:
             notes = note
             times = time

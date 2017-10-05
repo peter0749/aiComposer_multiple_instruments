@@ -10,9 +10,7 @@ import os.path
 
 step_size=1
 segLen=48
-track_num=2
-maxrange=60 ## [36, 95]
-vecLen=maxrange*track_num
+vecLen=49 ## [-24~+24]
 maxdelta=33 ## [0, 32]
 defaultRes=16.0
 
@@ -21,7 +19,7 @@ def purge(x):
     y = [x[-1]] #pick last element
     i = len(x)-2 # iterate over all set in reversed order
     while i>=0:
-        while i>=0 and x[i][1] == y[-1][1] and x[i][2] == y[-1][2]: ## overlapped, find next different note
+        while i>=0 and x[i][1] == y[-1][1]: ## overlapped, find next different note
             i -= 1
         if i>=0: ## founded
             y.append(x[i])
@@ -36,17 +34,15 @@ def Tempo2BPM(x):
 ## merge all tracks into one track
 
 def pattern2map(pattern, maxtick):
+    if pattern.format!=1 or len(pattern)==0: raise Exception('Wrong file format!')
     ResScale = float(pattern.resolution) / float(defaultRes)
-    instrument = -1
-    data=[(0.0,0)]#tick , key (main+accompany)
+    data=[(0.0, 0)]#tick , key (main+accompany)
     for track in pattern: ## main melody if instrument==0 else accompany
-        if instrument==1: break ## if main & accompany is set, then break.
-        temp=[(0.0,0)] #tick, note, instrument
+        temp=[(0.0, 0)] #tick, note, instrument
         speedRatio = 1.0
         Normal = 120.0
         accumTick = 0.
         firstTempo = True
-        noteOnDetected = False
         for v in track:
             if hasattr(v, 'tick') :
                 accumTick = accumTick + float(v.tick)/speedRatio
@@ -57,23 +53,27 @@ def pattern2map(pattern, maxtick):
                     firstTempo = False ## not first event anymore
                     continue ## no change on unit of ticks
                 speedRatio = float(changeBPM)/float(Normal)
-            elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
-                if not noteOnDetected: instrument+=1
-                noteOnDetected = True
-                note = (v.data[0]-36)+instrument*maxrange
-                temp.append((accumTick, note, instrument))
+            elif isinstance(v, midi.ProgramChangeEvent):
+                if v.channel==9 or v.data[0] < 24:  ## is drum or is not keyboard instrument
+                    temp=[(0.0, 0)]
+                    break
+            elif isinstance(v, midi.NoteOnEvent) and v.data[1]>0:
+                note = v.data[0]
+                temp.append((accumTick, note))
         temp = temp[1:-1]
         data.extend(temp)
     data = list(set(data)) ## remove duplicate data
+    if len(data)<2: raise Exception('No events!')
     data.sort()
     data = purge(data)
     for i in range(0, len(data)-1):
         tick = data[i+1][0] - data[i][0]
         tick = int(round(tick/ResScale)) ## adjust resolution, downsampling
         tick = maxtick if tick>maxtick else tick ## set a threshold
-        note = data[i+1][1]
-        inst = data[i+1][2]
-        data[i] = (tick,note,inst)
+        note = (0 if i==0 else data[i+1][1] - data[i][1]) + 24
+        note = max(0, note)
+        note = min(vecLen-1, note)
+        data[i] = (tick,note)
     data = data[0:-2] ## data must have two elements. ow crashs
     return data
 
