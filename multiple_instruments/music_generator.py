@@ -108,8 +108,8 @@ def main():
             pred_note[0][(127-note-24+vecLen):] = 1e-100
         key =  int(sample(pred_note[0], temperature_note, temperature_sd)) ## [-24~+24]
         note += (key-24)
-        note = max(0, note)
-        note = min(127, note)
+        while note<0: note+=12
+        while note>127: note-=12
         delta = int(sample(pred_time[0], temperature_delta, temperature_sd))
         if align>1:
             new_reach = tickAccum+delta ## accum ticks before this event + this key plays after received signal?

@@ -71,8 +71,8 @@ def pattern2map(pattern, maxtick):
         tick = int(round(tick/ResScale)) ## adjust resolution, downsampling
         tick = maxtick if tick>maxtick else tick ## set a threshold
         note = (0 if i==0 else data[i+1][1] - data[i][1]) + 24
-        note = max(0, note)
-        note = min(vecLen-1, note)
+        while note<0: note+=12
+        while note>=vecLen: note-=12
         data[i] = (tick,note)
     data = data[0:-2] ## data must have two elements. ow crashs
     return data
