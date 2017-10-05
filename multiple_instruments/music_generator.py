@@ -33,7 +33,7 @@ parser.add_argument('--debug', action='store_true', default=False,
                     help='Fix random seed')
 parser.add_argument('--sticky', action='store_true', default=False,
                     help='')
-parser.add_argument('--pitch_shift', type=int, default=0, required=False,
+parser.add_argument('--pitch_shift', type=int, default=48, required=False,
                     help='')
 
 args = parser.parse_args()
