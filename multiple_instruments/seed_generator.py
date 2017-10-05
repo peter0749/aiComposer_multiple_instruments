@@ -12,7 +12,7 @@ from tools import *
 
 step_size=1
 segLen=48
-vecLen=49
+vecLen=65
 maxdelta=33 ## [0, 32]
 Normal=120.0
 defaultRes=16.0

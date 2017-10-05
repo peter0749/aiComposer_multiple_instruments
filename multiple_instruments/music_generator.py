@@ -56,7 +56,7 @@ defaultUnit = 500000
 changedSpeed= int(round(500000.0/speedRatio))
 
 segLen=48
-vecLen=49 #[-24, +24]
+vecLen=65 #[-32, +32]
 maxdelta=33 #[0, 32]
 
 import keras
@@ -102,14 +102,14 @@ def main():
                     break
         if zs>=finger_limit: ## no more fingers
             pred_time[0][0] = 1e-100
-        if note-24<36:
-            skip = min(24-note+36, 24)
+        if note-32<36:
+            skip = min(32-note+36, 32)
             pred_note[0][:skip] = 1e-100
-        elif note+24>95: ## 127-note<24
-            skip = max(95-note-24+vecLen, 25)
+        elif note+32>95: ## 127-note<32
+            skip = max(95-note-32+vecLen, 25)
             pred_note[0][skip:] = 1e-100
-        key =  int(sample(pred_note[0], temperature_note, temperature_sd)) ## [-24~+24]
-        note += (key-24)
+        key =  int(sample(pred_note[0], temperature_note, temperature_sd)) ## [-32~+32]
+        note += (key-32)
         while note<36: note+=12
         while note>95: note-=12
         delta = int(sample(pred_time[0], temperature_delta, temperature_sd))
