@@ -54,7 +54,7 @@ def pattern2map(pattern, maxtick):
                     continue ## no change on unit of ticks
                 speedRatio = float(changeBPM)/float(Normal)
             elif isinstance(v, midi.ProgramChangeEvent):
-                if v.channel==9 or v.data[0] < 24:  ## is drum or is not keyboard instrument
+                if v.channel==9 or v.data[0] >= 24:  ## is drum or is not keyboard instrument
                     temp=[(0.0, 0)]
                     break
             elif isinstance(v, midi.NoteOnEvent) and v.data[1]>0:
