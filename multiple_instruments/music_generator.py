@@ -105,7 +105,7 @@ def main():
         if note-48<36:
             skip = min(48-note+36, 48)
             pred_note[0][:skip] = 1e-100
-        elif note+48>95: ## 127-note<48
+        if note+48>95: ## 127-note<48
             skip = max(95-note-48+vecLen, 25)
             pred_note[0][skip:] = 1e-100
         key =  int(sample(pred_note[0], temperature_note, temperature_sd)) ## [-48~+48]
