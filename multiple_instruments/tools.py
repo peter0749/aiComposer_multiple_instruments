@@ -10,7 +10,7 @@ import os.path
 
 step_size=1
 segLen=48
-vecLen=65 ## [-32~+32]
+vecLen=97
 maxdelta=33 ## [0, 32]
 defaultRes=16.0
 
@@ -70,7 +70,7 @@ def pattern2map(pattern, maxtick):
         tick = data[i+1][0] - data[i][0]
         tick = int(round(tick/ResScale)) ## adjust resolution, downsampling
         tick = maxtick if tick>maxtick else tick ## set a threshold
-        note = (0 if i==0 else data[i+1][1] - data[i][1]) + 32
+        note = (0 if i==0 else data[i+1][1] - data[i][1]) + 48
         while note<0: note+=12
         while note>=vecLen: note-=12
         data[i] = (tick,note)
