@@ -119,10 +119,10 @@ def pattern2map(pattern, maxtick):
 
 def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
     ResScale = float(pattern.resolution) / float(defaultRes)
-    data=[(0.0,0,0)]#tick , note, instrument, power
+    data=[(0,0,0)]#tick , note, instrument, power
     instrument = 46 # sets to piano by default
     for track in pattern:
-        temp=[(0.0,0,0)] #tick, note, instrument, power
+        temp=[(0,0,0)] #tick, note, instrument, power
         speedRatio = 1.0
         accumTick = 0.
         Normal = 120.0
@@ -147,16 +147,16 @@ def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
                 speedRatio = float(changeBPM)/float(Normal)
             elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
                 note = v.data[0]-36
-                temp.append((accumTick, note, instrument))
+                tick = int(round(accumTick/ResScale))
+                temp.append((tick, note, instrument))
         if len(temp)>1:
             temp = temp[1:-1]
             data.extend(temp)
     data = list(set(data)) ## remove duplicate data
     data.sort()
-    data = purge(data)
+    #data = purge(data)
     for i in range(0, len(data)-1):
         tick = data[i+1][0] - data[i][0]
-        tick = int(round(tick/ResScale)) ## adjust resolution, downsampling
         tick = maxtick if tick>maxtick else tick ## set a threshold
         note = data[i+1][1]
         inst = instMap[data[i+1][2]] ## encode
