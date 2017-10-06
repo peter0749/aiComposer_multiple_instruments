@@ -16,19 +16,6 @@ vecLen=maxrange*track_num
 maxdelta=33 ## [0, 32]
 defaultRes=16.0
 
-# Sorted x
-def purge(x):
-    y = [x[-1]] #pick last element
-    i = len(x)-2 # iterate over all set in reversed order
-    while i>=0:
-        while i>=0 and x[i][1] == y[-1][1] and x[i][2] == y[-1][2]: ## overlapped, find next different note
-            i -= 1
-        if i>=0: ## founded
-            y.append(x[i])
-        i -= 1
-    return list(reversed(y))
-# merge some overlaped intervals into single interval
-
 def Tempo2BPM(x):
     ret = x.data[2] | x.data[1]<<8 | x.data[0]<<16
     ret = float(60000000)/float(ret)
@@ -38,10 +25,10 @@ def Tempo2BPM(x):
 def pattern2map(pattern, maxtick):
     ResScale = float(pattern.resolution) / float(defaultRes)
     instrument = -1
-    data=[(0.0,0)]#tick , key (main+accompany)
+    data=[(0,0,0)]#tick , key (main+accompany)
     for track in pattern: ## main melody if instrument==0 else accompany
         if instrument==1: break ## if main & accompany is set, then break.
-        temp=[(0.0,0)] #tick, note, instrument
+        temp=[(0,0,0)] #tick, note, instrument
         speedRatio = 1.0
         Normal = 120.0
         accumTick = 0.
@@ -61,15 +48,14 @@ def pattern2map(pattern, maxtick):
                 if not noteOnDetected: instrument+=1
                 noteOnDetected = True
                 note = (v.data[0]-36)+instrument*maxrange
-                temp.append((accumTick, note, instrument))
+                tick = int(round(accumTick/ResScale))
+                temp.append((tick, note, instrument))
         temp = temp[1:-1]
         data.extend(temp)
     data = list(set(data)) ## remove duplicate data
     data.sort()
-    data = purge(data)
     for i in range(0, len(data)-1):
         tick = data[i+1][0] - data[i][0]
-        tick = int(round(tick/ResScale)) ## adjust resolution, downsampling
         tick = maxtick if tick>maxtick else tick ## set a threshold
         note = data[i+1][1]
         inst = data[i+1][2]
