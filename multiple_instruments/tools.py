@@ -65,7 +65,7 @@ def pattern2map(pattern, maxtick):
     data = list(set(data)) ## remove duplicate data
     if len(data)<2: raise Exception('No events!')
     data.sort()
-    data = purge(data)
+    #data = purge(data)
     for i in range(0, len(data)-1):
         tick = data[i+1][0] - data[i][0]
         tick = int(round(tick/ResScale)) ## adjust resolution, downsampling
