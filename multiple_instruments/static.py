@@ -71,7 +71,7 @@ import keras
 from keras.models import Sequential, load_model
 
 def sample(preds, temperature=0.05):
-    if temperature > 1e-9 and np.random.rand() < temperture:
+    if temperature > 1e-9 and np.random.rand() < temperature:
         preds[np.argmax(preds)]=1e-100 ## return sub-optimal solution
     return np.argmax(preds)
 
