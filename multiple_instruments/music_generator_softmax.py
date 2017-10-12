@@ -85,8 +85,7 @@ def sample(preds, temperature=1.0, temperature_sd=0.05):
         preds -= max(0.0, np.max(preds)) ## do max trick
         exp_preds = np.exp(preds/temperature)
         preds = exp_preds / np.sum(exp_preds)
-        probas = np.random.multinomial(1, preds, 1)
-        return np.argmax(probas)
+        return np.random.choice(len(preds), 1, p=preds)[0]
     except:
         return np.argmax(old)
 
