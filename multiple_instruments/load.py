@@ -56,10 +56,10 @@ with tf.device('/gpu:3'):
     encoded = Dropout(drop_rate)(codec)
 
     fc_notes = BatchNormalization()(encoded)
-    pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output')(fc_notes) ## output PMF
+    pred_notes = Dense(vecLen, kernel_initializer='normal', activation='linear', name='note_output')(fc_notes) ## output PMF
 
     fc_delta = BatchNormalization()(encoded)
-    pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output')(fc_delta) ## output PMF
+    pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='linear', name='time_output')(fc_delta) ## output PMF
 
 aiComposer = Model([noteInput, deltaInput], [pred_notes, pred_delta])
 if ( os.path.isfile('./top_weight.h5')):  ## fine-tuning
