@@ -77,7 +77,7 @@ def sample(preds, temperature=1.0, temperature_sd=0.05):
     temperature += np.random.randn()*temperature_sd ## add some noise
     if temperature < 1e-9:
         return np.argmax(preds)
-    preds = np.asarray(preds).astype('float64')
+    preds = np.asarray(preds).astype('float64') + 1.0 + 1e-9 ## (-1,+1) -> [0, +2)
     preds = np.log(preds) / temperature
     exp_preds = np.exp(preds-np.max(preds)) ## do max trick
     preds = exp_preds / np.sum(exp_preds)
