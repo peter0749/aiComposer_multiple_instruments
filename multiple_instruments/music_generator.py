@@ -74,6 +74,7 @@ import keras
 from keras.models import Sequential, load_model
 
 def sample(preds, temperature=1.0, temperature_sd=0.05):
+    if preds.ndim!=1: raise ValueError('Only support 1-D array!')
     temperature += np.random.randn()*temperature_sd ## add some noise
     if temperature < 1e-9:
         return np.argmax(preds)
