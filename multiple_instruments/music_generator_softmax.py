@@ -79,9 +79,9 @@ def sample(preds, temperature=1.0, temperature_sd=0.05):
     if temperature < 1e-9:
         return np.argmax(preds)
     preds = np.asarray(preds).astype('float64')
-    preds = np.log(preds) / temperature ## e_x -> x -> x / temp
+    preds = np.log(preds) ## e_x -> x
     preds -= max(0.0, np.max(preds)) ## do max trick
-    exp_preds = np.exp(preds)
+    exp_preds = np.exp(preds/temperature)
     preds = exp_preds / np.sum(exp_preds)
     probas = np.random.multinomial(1, preds, 1)
     res = np.argmax(probas)
