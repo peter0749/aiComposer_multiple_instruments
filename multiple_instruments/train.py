@@ -85,6 +85,7 @@ def generator(path_name, step_size, batch_size, train_what=''):
             fullfile = str(path_name)+'/'+str(filename)
             try:
                 pattern = midi.read_midifile(fullfile)
+                if pattern.format != 1: continue
                 data = pattern2map(pattern,maxdelta-1)
                 seg, nextseg  = makeSegment(data, segLen, step_size)
                 data = None ## clean-up
