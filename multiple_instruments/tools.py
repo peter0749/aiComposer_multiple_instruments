@@ -36,7 +36,7 @@ def pattern2map(pattern, maxtick):
         noteOnDetected = False
         for v in track:
             if isinstance(v, midi.ProgramChangeEvent):
-                if (hasattr(v, 'channel') and v.channel==9) or v.data[0]>=8:
+                if (hasattr(v, 'channel') and v.channel==9) or v.data[0]>=8: ## must be piano
                     break
             if hasattr(v, 'tick') :
                 accumTick = accumTick + float(v.tick)/speedRatio
@@ -55,6 +55,7 @@ def pattern2map(pattern, maxtick):
                 temp.append((tick, note, instrument))
         temp = temp[1:-1]
         data.extend(temp)
+    if instrument!=1: raise Exception('# of track of piano != 2!')
     data = list(set(data)) ## remove duplicate data
     data.sort()
     for i in range(0, len(data)-1):
