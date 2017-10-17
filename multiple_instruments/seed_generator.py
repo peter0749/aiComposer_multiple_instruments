@@ -28,9 +28,9 @@ def main():
         fullfile = str(seedDir)+'/'+str(filename)
         try:
             pattern = midi.read_midifile(fullfile)
+            data = pattern2map(pattern,maxdelta-1)
         except:
             continue
-        data = pattern2map(pattern,maxdelta-1)
         note, time = firstState(data, segLen)
         if notes is None or times is None:
             notes = note
