@@ -35,6 +35,9 @@ def pattern2map(pattern, maxtick):
         firstTempo = True
         noteOnDetected = False
         for v in track:
+            if isinstance(v, midi.ProgramChangeEvent):
+                if (hasattr(v, 'channel') and v.channel==9) or v.data[0]>=8:
+                    break
             if hasattr(v, 'tick') :
                 accumTick = accumTick + float(v.tick)/speedRatio
             if isinstance(v, midi.SetTempoEvent):
