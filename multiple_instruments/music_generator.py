@@ -51,7 +51,7 @@ speedRatio = bpm / defaultBpm
 defaultUnit = 500000
 changedSpeed= int(round(500000.0/speedRatio))
 
-segLen=48
+segLen=100
 vecLen=60 #[36, 95]
 maxdelta=33 #[0, 32]
 maxinst =14
