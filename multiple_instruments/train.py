@@ -80,6 +80,8 @@ kernel_size=3 ## midi program changes are by groups
 drop_rate=0.2 ## for powerful computer
 defaultRes=16.0
 
+inst_range = [0, 8, 12, 14] # [0,8): String; [8, 12): Brass; [12,14): Pipe
+
 K.set_floatx(compute_precision)
 
 ## instrument mapping:
@@ -228,8 +230,8 @@ def makeSegment(data, maxlen, step):
     for i in xrange(0, len(data) - maxlen, step):
         test = np.array(data[i: i+maxlen+1])
         FAIL = False
-        for j in xrange(maxinst):
-            if np.sum(test[:,2]==j)==0:
+        for j in xrange(len(inst_range)-1):
+            if np.sum((test[:,2]>=inst_range[j])*(test[:,2]<inst_range[j+1]))==0:
                 FAIL = True
                 break
         del test
