@@ -83,7 +83,7 @@ def makeSegment(data, maxlen, step):
     nextseq = []
     for i in xrange(0, len(data) - maxlen, step):
         test = np.array(data[i: i+maxlen+1])
-        if np.sum(test[:,1]>=maxrange)<2 or np.sum(test[:,1]<maxrange)<2: continue ## discard melody without accompany
+        if np.sum(test[:,1]>=maxrange)==0 or np.sum(test[:,1]<maxrange)==0: continue ## discard melody without accompany/main melody
         del test
         sentences.append(data[i: i + maxlen])
         nextseq.append(data[i + maxlen])
