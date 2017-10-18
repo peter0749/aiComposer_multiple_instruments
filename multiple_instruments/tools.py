@@ -25,10 +25,10 @@ def Tempo2BPM(x):
 def pattern2map(pattern, maxtick):
     ResScale = float(pattern.resolution) / float(defaultRes)
     instrument = -1
-    data=[(0,0,0)]#tick , key (main+accompany)
+    data=[(0,0)]#tick , key (main+accompany)
     for track in pattern: ## main melody if instrument==0 else accompany
         if instrument==1: break ## if main & accompany is set, then break.
-        temp=[(0,0,0)] #tick, note, instrument
+        temp=[(0,0)] #tick, note
         speedRatio = 1.0
         Normal = 120.0
         accumTick = 0.
@@ -37,6 +37,7 @@ def pattern2map(pattern, maxtick):
         for v in track:
             if isinstance(v, midi.ProgramChangeEvent):
                 if (hasattr(v, 'channel') and v.channel==9) or v.data[0]>=8: ## must be piano
+                    temp=[(0,0)] #tick, note
                     break
             if hasattr(v, 'tick') :
                 accumTick = accumTick + float(v.tick)/speedRatio
@@ -52,7 +53,7 @@ def pattern2map(pattern, maxtick):
                 noteOnDetected = True
                 note = (v.data[0]-36)+instrument*maxrange
                 tick = int(round(accumTick/ResScale))
-                temp.append((tick, note, instrument))
+                temp.append((tick, note))
         temp = temp[1:-1]
         data.extend(temp)
     if instrument!=1: raise Exception('# of track of piano != 2!')
@@ -60,10 +61,9 @@ def pattern2map(pattern, maxtick):
     data.sort()
     for i in range(0, len(data)-1):
         tick = data[i+1][0] - data[i][0]
-        tick = maxtick if tick>maxtick else tick ## set a threshold
-        note = data[i+1][1]
-        inst = data[i+1][2]
-        data[i] = (tick,note,inst)
+        tick = int(maxtick if tick>maxtick else tick) ## set a threshold
+        note = int(data[i+1][1])
+        data[i] = (tick,note)
     data = data[0:-2] ## data must have two elements. ow crashs
     return data
 
@@ -82,6 +82,8 @@ def makeSegment(data, maxlen, step):
     sentences = []
     nextseq = []
     for i in xrange(0, len(data) - maxlen, step):
+        test = np.array(data)
+        if np.sum(test[i: i + maxlen, 1]>=maxrange)<7 or np.sum(test[i: i + maxlen, 1]<maxrange)<7: continue ## discard melody without accompany
         sentences.append(data[i: i + maxlen])
         nextseq.append(data[i + maxlen])
     randIdx = np.random.permutation(len(sentences))
