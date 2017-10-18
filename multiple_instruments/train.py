@@ -226,6 +226,14 @@ def makeSegment(data, maxlen, step):
     sentences = []
     nextseq = []
     for i in xrange(0, len(data) - maxlen, step):
+        test = np.array(data[i: i+maxlen+1])
+        FAIL = False
+        for j in xrange(maxinst):
+            if np.sum(test[:,2]==j)==0:
+                FAIL = True
+                break
+        del test
+        if FAIL: continue
         sentences.append(data[i: i + maxlen])
         nextseq.append(data[i + maxlen])
     randIdx = np.random.permutation(len(sentences))
