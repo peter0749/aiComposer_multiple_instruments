@@ -88,12 +88,11 @@ def generator(path_name, step_size, batch_size, train_what=''):
                 if pattern.format != 1: continue
                 data = pattern2map(pattern,maxdelta-1)
                 seg, nextseg  = makeSegment(data, segLen, step_size)
-                data = None ## clean-up
+                del data ## clean-up
                 note, time, n_note, n_time = seg2vec(seg, nextseg, segLen, vecLen, maxdelta)
-                seg = None
-                nextseg = None
+                del seg
+                del nextseg
             except:
-                pattern = data = seg = nextseg = None
                 sys.stderr.write('something wrong...:\\')
                 continue
             for i in xrange(0, len(note)-batch_size, batch_size):
