@@ -12,7 +12,6 @@ from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
 from keras import backend as K
-from attention_block import SoftAttentionBlock
 import numpy as np
 import sys
 import math
@@ -50,7 +49,6 @@ with tf.device('/gpu:1'):
 
 with tf.device('/gpu:3'):
     codec = concatenate([noteEncode, deltaEncode], axis=-1)
-    codec = SoftAttentionBlock(codec, segLen, hidden_note+hidden_delta)
     codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='softsign')(codec)
     codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='softsign')(codec)
     encoded = Dropout(drop_rate)(codec)

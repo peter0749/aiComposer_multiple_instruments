@@ -8,7 +8,6 @@ from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
 from keras import backend as K
-from attention_block import SoftAttentionBlock
 import numpy as np
 import midi
 import random
@@ -127,7 +126,6 @@ def main():
     deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaEncode)
 
     codec = concatenate([noteEncode, deltaEncode], axis=-1) ## return last state
-    codec = SoftAttentionBlock(codec, segLen, hidden_note+hidden_delta, trainable=train_att)
     codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
     codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)

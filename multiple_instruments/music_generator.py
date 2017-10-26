@@ -85,9 +85,9 @@ def sample(preds, temperature=1.0, temperature_sd=0.05):
     old = preds
     try:
         preds = np.asarray(preds).astype('float64')
+        preds = np.log(preds) ## e_x -> x
         preds -= max(0.0, np.max(preds)) ## do max trick
-        preds /= temperature
-        exp_preds = np.exp(preds)
+        exp_preds = np.exp(preds/temperature)
         preds = exp_preds / np.sum(exp_preds)
         return np.random.choice(len(preds), 1, p=preds)[0]
     except:
@@ -144,7 +144,7 @@ def main():
         align = align_right if inst==0 else align_left
         if last[inst]==-1:
             track[inst].append(midi.SetTempoEvent(tick=0, data=[(changedSpeed>>16) &0xff, (changedSpeed>>8) &0xff, changedSpeed &0xff], channel=inst))
-            track[inst].append(midi.ProgramChangeEvent(tick=0, data=[instProgram[inst]], channel=inst)) ## first event: program change to piano
+            track[inst].append(midi.ProgramChangeEvent(tick=0, data=[ instProgram[inst] ], channel=inst)) ## first event: program change to piano
             last[inst]=0
         diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
         if align>1:

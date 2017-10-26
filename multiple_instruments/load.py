@@ -12,7 +12,6 @@ from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
 from keras import backend as K
-from attention_block import SoftAttentionBlock
 import numpy as np
 import sys
 import math
@@ -50,16 +49,15 @@ with tf.device('/gpu:1'):
 
 with tf.device('/gpu:3'):
     codec = concatenate([noteEncode, deltaEncode], axis=-1)
-    codec = SoftAttentionBlock(codec, segLen, hidden_note+hidden_delta)
     codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='softsign')(codec)
     codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='softsign')(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_notes = BatchNormalization()(encoded)
-    pred_notes = Dense(vecLen, kernel_initializer='normal', activation='linear', name='note_output')(fc_notes) ## output PMF
+    pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output')(fc_notes) ## output PMF
 
     fc_delta = BatchNormalization()(encoded)
-    pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='linear', name='time_output')(fc_delta) ## output PMF
+    pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output')(fc_delta) ## output PMF
 
 aiComposer = Model([noteInput, deltaInput], [pred_notes, pred_delta])
 if ( os.path.isfile('./top_weight.h5')):  ## fine-tuning
