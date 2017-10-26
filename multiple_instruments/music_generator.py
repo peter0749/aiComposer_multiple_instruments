@@ -39,6 +39,10 @@ parser.add_argument('--random_init', action='store_true', default=False,
                     help='Fix random seed')
 parser.add_argument('--sticky', action='store_true', default=False,
                     help='')
+parser.add_argument('--main_instrument', type=int, default=0, required=False,
+                    help='Main instrument')
+parser.add_argument('--accompany_instrument', type=int, default=46, required=False,
+                    help='Accompany instrument')
 
 args = parser.parse_args()
 tar_midi = args.output_midi_path
@@ -91,6 +95,7 @@ def sample(preds, temperature=1.0, temperature_sd=0.05):
 
 def main():
     global segLen, vecLen
+    instProgram = [ args.main_instrument, args.accompany_instrument ]
     model = load_model('./multi.h5')
     output = midi.Pattern(resolution=16) ## reduce dimension of ticks...
     track = [midi.Track() for _ in xrange(track_num)]
@@ -138,8 +143,8 @@ def main():
         delta = int(sample(pred_time[0], temperature_delta, temperature_sd))
         align = align_right if inst==0 else align_left
         if last[inst]==-1:
-            track[inst].append(midi.SetTempoEvent(tick=0, data=[(changedSpeed>>16) &0xff, (changedSpeed>>8) &0xff, changedSpeed &0xff]))
-            track[inst].append(midi.ProgramChangeEvent(tick=0, data=[0], channel=0)) ## first event: program change to piano
+            track[inst].append(midi.SetTempoEvent(tick=0, data=[(changedSpeed>>16) &0xff, (changedSpeed>>8) &0xff, changedSpeed &0xff], channel=inst))
+            track[inst].append(midi.ProgramChangeEvent(tick=0, data=[instProgram[inst]], channel=inst)) ## first event: program change to piano
             last[inst]=0
         diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
         if align>1:
@@ -150,10 +155,10 @@ def main():
             #print('%d: %d' % (inst,new_reach%align))
         ## note alignment:
         while diff>127:
-            track[inst].append(midi.ControlChangeEvent(tick=127, channel=0, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
+            track[inst].append(midi.ControlChangeEvent(tick=127, channel=inst, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
             diff-=127
         if diff>0:
-            track[inst].append(midi.ControlChangeEvent(tick=diff, channel=0, data=[3, 0])) ## append 'foo' event
+            track[inst].append(midi.ControlChangeEvent(tick=diff, channel=inst, data=[3, 0])) ## append 'foo' event
 
         ## note on:
         if args.sticky:
@@ -162,9 +167,9 @@ def main():
                     break
                 elif isinstance(track[inst][t], midi.NoteOnEvent):
                     findLastNoteOn = track[inst][t].data[0]
-                    track[inst].append(midi.NoteOffEvent(tick=0, data=[ findLastNoteOn, 0]))
+                    track[inst].append(midi.NoteOffEvent(tick=0, data=[ findLastNoteOn, 0], channel=inst))
                     break
-        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), 127]))
+        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), 127], channel=inst))
         tickAccum += delta
         last[inst] = tickAccum
         notes = np.roll(notes, -1, axis=1)
@@ -189,8 +194,8 @@ def main():
         print('processed: ', i+1, '/', noteNum)
     for i in xrange(track_num):
         if args.sticky and len(track[i])>0 and isinstance(track[i][-1], midi.NoteOnEvent):
-            track[i].append(midi.NoteOffEvent(tick=0, data=[ track[i][-1].data[0], 0]))
-        track[i].append( midi.EndOfTrackEvent(tick=0) )
+            track[i].append(midi.NoteOffEvent(tick=0, data=[ track[i][-1].data[0], 0], channel=i))
+        track[i].append( midi.EndOfTrackEvent(tick=0, channel=i) )
     midi.write_midifile(tar_midi, output)
 
 if __name__ == "__main__":
