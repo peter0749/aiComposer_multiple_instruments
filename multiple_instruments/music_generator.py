@@ -108,6 +108,7 @@ def main():
         seedIdx = np.random.randint(len(seed['notes']))
         notes[:,:,:] = seed['notes'][seedIdx,:,:]
         deltas[:,:,:] = seed['times'][seedIdx,:,:]
+        print('Using seed: %s' % seed['names'][seedIdx])
         seed = None ## release
     else: ## random init
         notes[:,:,:] = np.eye(vecLen)[np.random.choice(vecLen, segLen)]
@@ -152,7 +153,6 @@ def main():
             if new_reach % align != 0: ## if not aligned
                 new_reach += align-(new_reach%align)
             delta = min(32, max(0, new_reach - tickAccum)) ## aligned tick
-            #print('%d: %d' % (inst,new_reach%align))
         ## note alignment:
         while diff>127:
             track[inst].append(midi.ControlChangeEvent(tick=127, channel=inst, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
