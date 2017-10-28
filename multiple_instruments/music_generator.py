@@ -120,8 +120,8 @@ def main():
         ch = 1
         inst_code = invMap[inst]
         if last[inst]==-1:
-            track[inst].append(midi.SetTempoEvent(tick=0, data=[(changedSpeed>>16) &0xff, (changedSpeed>>8) &0xff, changedSpeed &0xff]))
-            track[inst].append(midi.ProgramChangeEvent(tick=0, data=[inst_code], channel=ch))
+            track[inst].append(midi.SetTempoEvent(tick=0, data=[(changedSpeed>>16) &0xff, (changedSpeed>>8) &0xff, changedSpeed &0xff], channel=inst))
+            track[inst].append(midi.ProgramChangeEvent(tick=0, data=[inst_code], channel=inst))
             last[inst]=0
         diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
         if align>1:
@@ -132,18 +132,18 @@ def main():
 
         ## note alignment:
         while diff>127:
-            track[inst].append(midi.ControlChangeEvent(tick=127, channel=ch, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
+            track[inst].append(midi.ControlChangeEvent(tick=127, channel=inst, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
             diff-=127
         if diff>0:
-            track[inst].append(midi.ControlChangeEvent(tick=diff, channel=ch, data=[3, 0])) ## append 'foo' event
+            track[inst].append(midi.ControlChangeEvent(tick=diff, channel=inst, data=[3, 0])) ## append 'foo' event
 
         ## note on:
-        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), 127]))
+        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), 127], channel=inst))
         tickAccum += delta
         last[inst] = tickAccum
         print('processed: ', i+1, '/', noteNum)
     for i in xrange(maxinst):
-        track[i].append( midi.EndOfTrackEvent(tick=1) )
+        track[i].append( midi.EndOfTrackEvent(tick=1, channel=i) )
     midi.write_midifile(tar_midi, output)
 
 if __name__ == "__main__":
