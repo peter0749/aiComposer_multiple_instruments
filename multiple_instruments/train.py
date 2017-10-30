@@ -317,8 +317,8 @@ def main():
     instEncode   = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instEncode)
 
     codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
-    codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
-    codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
+    codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
+    codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_inst = BatchNormalization(trainable=train_inst)(encoded)

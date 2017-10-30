@@ -56,8 +56,8 @@ with tf.device('/gpu:2'):
 
 with tf.device('/gpu:3'):
     codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
-    codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='softsign')(codec)
-    codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='softsign')(codec)
+    codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='tanh')(codec)
+    codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='tanh')(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_inst = BatchNormalization()(encoded)
