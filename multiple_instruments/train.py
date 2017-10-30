@@ -126,8 +126,8 @@ def main():
     deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaEncode)
 
     codec = concatenate([noteEncode, deltaEncode], axis=-1) ## return last state
-    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
-    codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='softsign', trainable=train_lstm)(codec)
+    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
+    codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_notes = BatchNormalization(trainable=train_note)(encoded)
