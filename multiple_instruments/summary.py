@@ -60,14 +60,17 @@ with tf.device('/gpu:3'):
     codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='tanh')(codec)
     encoded = Dropout(drop_rate)(codec)
 
-    fc_inst = BatchNormalization()(encoded)
-    pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output')(fc_inst) ## output PMF
+    fc_inst = Dense(maxinst, kernel_initializer='normal')(encoded)
+    fc_inst = BatchNormalization()(fc_inst)
+    pred_inst = Activation('softmax', name='inst_output')(fc_inst)
 
-    fc_notes = BatchNormalization()(encoded)
-    pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output')(fc_notes) ## output PMF
+    fc_notes = Dense(vecLen, kernel_initializer='normal')(encoded) ## output PMF
+    fc_notes = BatchNormalization()(fc_notes)
+    pred_notes = Activation('softmax', name='note_output')(fc_notes)
 
-    fc_delta = BatchNormalization()(encoded)
-    pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output')(fc_delta) ## output PMF
+    fc_delta = Dense(maxdelta, kernel_initializer='normal')(encoded) ## output PMF
+    fc_delta = BatchNormalization()(fc_delta)
+    pred_delta = Activation('softmax', name='time_output')(fc_delta) ## output PMF
 
 aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, pred_inst])
 aiComposer.summary()

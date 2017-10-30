@@ -321,14 +321,18 @@ def main():
     codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
 
-    fc_inst = BatchNormalization(trainable=train_inst)(encoded)
-    pred_inst = Dense(maxinst, kernel_initializer='normal', activation='softmax', name='inst_output',  trainable=train_inst)(fc_inst) ## output PMF
+    fc_inst = Dense(maxinst, kernel_initializer='normal', trainable=train_inst)(encoded)
+    fc_inst = BatchNormalization(trainable=train_inst)(fc_inst)
+    pred_inst = Activation('softmax', name='inst_output', trainable=train_inst)(fc_inst)
 
-    fc_notes = BatchNormalization(trainable=train_note)(encoded)
-    pred_notes = Dense(vecLen, kernel_initializer='normal', activation='softmax', name='note_output', trainable=train_note)(fc_notes) ## output PMF
+    fc_notes = Dense(vecLen, kernel_initializer='normal', trainable=train_note)(encoded) ## output PMF
+    fc_notes = BatchNormalization(trainable=train_note)(fc_notes)
+    pred_notes = Activation('softmax', name='note_output', trainable=train_note)(fc_notes)
 
-    fc_delta = BatchNormalization(trainable=train_delta)(encoded)
-    pred_delta = Dense(maxdelta, kernel_initializer='normal', activation='softmax', name='time_output', trainable=train_delta)(fc_delta) ## output PMF
+    fc_delta = Dense(maxdelta, kernel_initializer='normal', trainable=train_delta)(encoded) ## output PMF
+    fc_delta = BatchNormalization(trainable=train_delta)(fc_delta)
+    pred_delta = Activation('softmax', name='time_output', trainable=train_delta)(fc_delta) ## output PMF
+
     aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, pred_inst])
     instClass  = Model([noteInput, deltaInput, instInput], [pred_inst])
     noteClass  = Model([noteInput, deltaInput, instInput], [pred_notes])
