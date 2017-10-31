@@ -35,8 +35,8 @@ parser.add_argument('--do_format', action='store_true', default=False,
                     help='Format data before sending into model...')
 parser.add_argument('--debug', action='store_true', default=False,
                     help='Fix random seed')
-parser.add_argument('--random_init', action='store_true', default=False,
-                    help='Fix random seed')
+parser.add_argument('--init', type=str, default='seed', required=False,
+        help='Initialization: seed/random/zero (default: seed)')
 parser.add_argument('--sticky', action='store_true', default=False,
                     help='')
 parser.add_argument('--main_instrument', type=int, default=0, required=False,
@@ -103,16 +103,19 @@ def main():
         output.append(track[i])
     notes = np.zeros((1, segLen, vecLen))
     deltas = np.zeros((1, segLen, maxdelta))
-    if not args.random_init:
+    if args.init=='seed':
         seed = np.load('./seed.npz')
         seedIdx = np.random.randint(len(seed['notes']))
         notes[:,:,:] = seed['notes'][seedIdx,:,:]
         deltas[:,:,:] = seed['times'][seedIdx,:,:]
         print('Using seed: %s' % seed['names'][seedIdx])
         seed = None ## release
-    else: ## random init
+    elif args.init=='random': ## random init
         notes[:,:,:] = np.eye(vecLen)[np.random.choice(vecLen, segLen)]
         deltas[:,:,:]= np.eye(maxdelta)[np.random.choice(maxdelta, segLen)]
+    else: ## zero
+        notes[:,:,:] = 0
+        deltas[:,:,:]= 0
 
     last = np.zeros(track_num)
     for _ in xrange(track_num):
