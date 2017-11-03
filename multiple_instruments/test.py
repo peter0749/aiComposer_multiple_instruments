@@ -1,13 +1,7 @@
 from __future__ import print_function
 import os
+import keras
 from keras.models import Sequential, load_model, Model
-from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
-from keras.layers import LSTM, LSTM, BatchNormalization, RepeatVector, TimeDistributed
-from keras.layers.merge import concatenate
-from keras.optimizers import RMSprop
-from keras.utils.io_utils import HDF5Matrix
-from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
-from keras import backend as K
 import numpy as np
 import midi
 import random
