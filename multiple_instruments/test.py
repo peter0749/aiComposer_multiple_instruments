@@ -22,8 +22,21 @@ parser.add_argument('--model', type=str, default='./multi.h5', required=False,
 args = parser.parse_args()
 
 compute_precision='float32'
+step_size=1
+segLen=48
+track_num=2
+maxrange=60 ## [36, 95]
+vecLen=maxrange*track_num
+maxdelta=33 ## [0, 32]
 batch_size = args.batch_size
 model_path = args.model
+hidden_delta=128
+hidden_note=256
+drop_rate=0.2 ## for powerful computer
+Normal=120.0
+defaultRes=16.0
+
+K.set_floatx(compute_precision)
 
 def generator(path_name, step_size, batch_size, train_what='', valid=False):
     while True:
