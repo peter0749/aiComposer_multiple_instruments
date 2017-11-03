@@ -16,7 +16,9 @@ parser = argparse.ArgumentParser(description='Music Generation with Mutiple Inst
 parser.add_argument('test_dir', metavar='testing', type=str,
                     help='Path to the testing set.')
 parser.add_argument('--steps', type=int, default=65535, required=False,
-                    help='Number of samples per iteration.')
+                    help='Steps for testing.')
+parser.add_argument('--batch_size', type=int, default=128, required=False,
+                    help='Number of sample each step.')
 parser.add_argument('--model', type=str, default='./multi.h5', required=False,
                     help='Path to model')
 args = parser.parse_args()
@@ -29,6 +31,7 @@ maxrange=60 ## [36, 95]
 vecLen=maxrange*track_num
 maxdelta=33 ## [0, 32]
 steps = args.steps
+batch_size = args.batch_size
 model_path = args.model
 hidden_delta=128
 hidden_note=256
