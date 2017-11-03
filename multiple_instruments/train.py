@@ -75,7 +75,7 @@ defaultRes=16.0
 
 K.set_floatx(compute_precision)
 
-def generator(path_name, step_size, batch_size, train_what=''):
+def generator(path_name, step_size, batch_size, train_what='', valid=False):
     while True:
         randomFile = os.listdir(str(path_name))
         random.shuffle(randomFile)
@@ -86,7 +86,7 @@ def generator(path_name, step_size, batch_size, train_what=''):
                 pattern = midi.read_midifile(fullfile)
                 if pattern.format != 1: continue
                 data = pattern2map(pattern,maxdelta-1)
-                seg, nextseg  = makeSegment(data, segLen, step_size)
+                seg, nextseg  = makeSegment(data, segLen, step_size, valid)
                 del data ## clean-up
                 note, time, n_note, n_time = seg2vec(seg, nextseg, segLen, vecLen, maxdelta)
                 del seg
@@ -181,12 +181,12 @@ def main():
 
     for ite in xrange(loops):
         if epochs_note>0:
-            noteClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'note'), steps_per_epoch=samples_per_epoch, epochs=epochs_note, validation_data=generator(args.valid_dir, step_size, batch_size, 'note'), validation_steps=5, callbacks=[noteCheckPoint, noteLogs]) ## fine tune note classifier
+            noteClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'note', valid=False), steps_per_epoch=samples_per_epoch, epochs=epochs_note, validation_data=generator(args.valid_dir, step_size, batch_size, 'note', valid=True), validation_steps=5, callbacks=[noteCheckPoint, noteLogs]) ## fine tune note classifier
             for l in note_dict: full_dict[l].set_weights(note_dict[l].get_weights())
         if epochs_delta>0:
-            deltaClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'delta'), steps_per_epoch=samples_per_epoch, epochs=epochs_delta, validation_data=generator(args.valid_dir, step_size, batch_size, 'delta'), validation_steps=5, callbacks=[deltaCheckPoint, deltaLogs]) ## fine tune tick classifier
+            deltaClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'delta', valid=False), steps_per_epoch=samples_per_epoch, epochs=epochs_delta, validation_data=generator(args.valid_dir, step_size, batch_size, 'delta', valid=True), validation_steps=5, callbacks=[deltaCheckPoint, deltaLogs]) ## fine tune tick classifier
             for l in delta_dict: full_dict[l].set_weights(delta_dict[l].get_weights())
-        aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, 'all'), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, 'all'), validation_steps=10, callbacks=[checkPoint, Logs])
+        aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, 'all', valid=False), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, 'all', valid=True), validation_steps=10, callbacks=[checkPoint, Logs])
         aiComposer.save('./multi-%d.h5' % ite)
     aiComposer.save('./multi.h5')
 

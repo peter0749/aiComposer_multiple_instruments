@@ -90,8 +90,11 @@ def enhanced(data, maxlen): ## offset -2, +2
         res.append([(-1,-1)]*maxlen+temp)
     return res
 
-def makeSegment(data, maxlen, step):
-    data = enhanced(data, maxlen) ## shift tune
+def makeSegment(data, maxlen, step, valid=False):
+    if valid:
+        data = [data]
+    else:
+        data = enhanced(data, maxlen) ## shift tune on training set
     sentences = []
     nextseq = []
     for subdata in data:
