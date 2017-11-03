@@ -78,17 +78,30 @@ def firstState(data, maxlen):
         notes[0, t, int(note[1])] = 1
     return notes, times
 
+def enhanced(data, maxlen): ## offset -2, +2
+    res = [[(-1,-1)]*maxlen + data]
+    for offset in [-2, 2]: ## -2, +2
+        temp = data
+        for i, (n, d) in enumerate(temp):
+            if n<maxrange: ## main
+                temp[i] = (np.clip(n+offset,0,maxrange-1), d)
+            else:
+                temp[i] = (np.clip(n+offset,maxrange,vecLen-1), d)
+        res.append([(-1,-1)]*maxlen+temp)
+    return res
+
 def makeSegment(data, maxlen, step):
-    data = [(-1,-1)]*maxlen + data ## every begin
+    data = enhanced(data, maxlen) ## shift tune
     sentences = []
     nextseq = []
-    for i in xrange(0, len(data) - maxlen, step):
-        if data[i][0]!=-1:
-            test = np.array(data[i: i+maxlen+1])
-            if np.sum(test[:,1]>=maxrange)==0 or np.sum(test[:,1]<maxrange)==0: continue ## discard melody without accompany/main melody
-            del test
-        sentences.append(data[i: i + maxlen])
-        nextseq.append(data[i + maxlen])
+    for subdata in data:
+        for i in xrange(0, len(subdata) - maxlen, step):
+            if subdata[i][0]!=-1:
+                test = np.array(subdata[i: i+maxlen+1])
+                if np.sum(test[:,1]>=maxrange)==0 or np.sum(test[:,1]<maxrange)==0: continue ## discard melody without accompany/main melody
+                del test
+            sentences.append(subdata[i: i + maxlen])
+            nextseq.append(subdata[i + maxlen])
     randIdx = np.random.permutation(len(sentences))
     return np.array(sentences)[randIdx], np.array(nextseq)[randIdx]
 
