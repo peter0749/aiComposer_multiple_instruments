@@ -79,7 +79,7 @@ def firstState(data, maxlen):
     return notes, times
 
 def makeSegment(data, maxlen, step):
-    data = data.insert(0, [(-1,-1)]*maxlen) ## every begin
+    data = [(-1,-1)]*maxlen + data ## every begin
     sentences = []
     nextseq = []
     for i in xrange(0, len(data) - maxlen, step):
