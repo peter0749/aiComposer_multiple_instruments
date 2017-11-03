@@ -12,10 +12,10 @@ import os.path
 import argparse
 from tools import *
 
-parser = argparse.ArgumentParser(description='Music Generation with Mutiple Instruments (training)')
+parser = argparse.ArgumentParser(description='Music Generation with Mutiple Instruments (testing)')
 parser.add_argument('test_dir', metavar='testing', type=str,
                     help='Path to the testing set.')
-parser.add_argument('--batch_size', type=int, default=128, required=False,
+parser.add_argument('--steps', type=int, default=65535, required=False,
                     help='Number of samples per iteration.')
 parser.add_argument('--model', type=str, default='./multi.h5', required=False,
                     help='Path to model')
@@ -28,7 +28,7 @@ track_num=2
 maxrange=60 ## [36, 95]
 vecLen=maxrange*track_num
 maxdelta=33 ## [0, 32]
-batch_size = args.batch_size
+steps = args.steps
 model_path = args.model
 hidden_delta=128
 hidden_note=256
@@ -78,7 +78,7 @@ def generator(path_name, step_size, batch_size, train_what='', valid=False):
 def main():
     aiComposer = load_model(model_path)
     aiComposer.summary()
-    result = aiComposer.evaluate_generator(generator(args.test_dir, step_size, batch_size, 'all', valid=True), steps=65536)
+    result = aiComposer.evaluate_generator(generator(args.test_dir, step_size, batch_size, 'all', valid=True), steps=steps)
     print(result)
 if __name__ == "__main__":
     main()
