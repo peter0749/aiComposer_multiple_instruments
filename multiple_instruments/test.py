@@ -36,8 +36,6 @@ drop_rate=0.2 ## for powerful computer
 Normal=120.0
 defaultRes=16.0
 
-K.set_floatx(compute_precision)
-
 def generator(path_name, step_size, batch_size, train_what='', valid=False):
     while True:
         randomFile = os.listdir(str(path_name))
