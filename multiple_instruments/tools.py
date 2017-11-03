@@ -79,12 +79,14 @@ def firstState(data, maxlen):
     return notes, times
 
 def makeSegment(data, maxlen, step):
+    data = data.insert(0, [(-1,-1)]*maxlen) ## every begin
     sentences = []
     nextseq = []
     for i in xrange(0, len(data) - maxlen, step):
-        test = np.array(data[i: i+maxlen+1])
-        if np.sum(test[:,1]>=maxrange)==0 or np.sum(test[:,1]<maxrange)==0: continue ## discard melody without accompany/main melody
-        del test
+        if data[i][0]!=-1:
+            test = np.array(data[i: i+maxlen+1])
+            if np.sum(test[:,1]>=maxrange)==0 or np.sum(test[:,1]<maxrange)==0: continue ## discard melody without accompany/main melody
+            del test
         sentences.append(data[i: i + maxlen])
         nextseq.append(data[i + maxlen])
     randIdx = np.random.permutation(len(sentences))
@@ -98,6 +100,7 @@ def seg2vec(segment, nextseg, segLen, vecLen, maxdelta):
     times_n = np.zeros((len(segment), maxdelta), dtype=np.bool)
     for i, seg in enumerate(segment):
         for t, note in enumerate(seg):
+            if note[0]==-1: continue
             times[i, t, int(note[0])] = 1
             notes[i, t, int(note[1])] = 1
         times_n[i, int(nextseg[i][0])] = 1
