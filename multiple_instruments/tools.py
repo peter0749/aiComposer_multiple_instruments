@@ -82,11 +82,11 @@ def enhanced(data, maxlen): ## offset -2, +2
     res = [[(-1,-1)]*maxlen + data]
     for offset in [-2, 2]: ## -2, +2
         temp = data
-        for i, (n, d) in enumerate(temp):
+        for i, (d, n) in enumerate(temp):
             if n<maxrange: ## main
-                temp[i] = (np.clip(n+offset,0,maxrange-1), d)
+                temp[i] = (d, np.clip(n+offset,0,maxrange-1))
             else:
-                temp[i] = (np.clip(n+offset,maxrange,vecLen-1), d)
+                temp[i] = (d, np.clip(n+offset,maxrange,vecLen-1))
         res.append([(-1,-1)]*maxlen+temp)
     return res
 
