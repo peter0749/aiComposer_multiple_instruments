@@ -2,7 +2,7 @@ from __future__ import print_function
 import os
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
-from keras.layers import LSTM, GRU, BatchNormalization, RepeatVector, TimeDistributed
+from keras.layers import CuDNNLSTM, CuDNNGRU, BatchNormalization, RepeatVector, TimeDistributed
 from keras.layers.merge import concatenate
 from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
@@ -301,22 +301,25 @@ def generator(path_name, step_size, batch_size, train_what=''):
 
 def main():
     # network:
-    # build the model: stacked GRUs
+    # build the model: stacked CuDNNGRUs
     print('Build model...')
     # network:
     noteInput  = Input(shape=(segLen, vecLen))
-    noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteInput)
+    noteEncode = CuDNNGRU(hidden_note, return_sequences=True, trainable=train_note)(noteInput)
 
     deltaInput = Input(shape=(segLen, maxdelta))
-    deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaInput)
+    deltaEncode = CuDNNGRU(hidden_delta, return_sequences=True, trainable=train_delta)(deltaInput)
 
     instInput = Input(shape=(segLen, maxinst))
-    instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instInput)
+    instEncode   = CuDNNGRU(hidden_inst, return_sequences=True, trainable=train_inst)(instInput)
 
     codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
-    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
-    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
-    codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
+    codec = Dropout(drop_rate)(codec)
+    codec = CuDNNLSTM(600, return_sequences=True, trainable=train_lstm)(codec)
+    codec = Dropout(drop_rate)(codec)
+    codec = CuDNNLSTM(600, return_sequences=True, trainable=train_lstm)(codec)
+    codec = Dropout(drop_rate)(codec)
+    codec = CuDNNLSTM(600, return_sequences=False, trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_inst = Dense(maxinst, kernel_initializer='normal', trainable=train_inst)(encoded)

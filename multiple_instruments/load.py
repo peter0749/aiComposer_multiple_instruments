@@ -6,7 +6,7 @@ config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
-from keras.layers import GRU, LSTM, BatchNormalization, RepeatVector, TimeDistributed
+from keras.layers import CuDNNGRU, CuDNNLSTM, BatchNormalization, RepeatVector, TimeDistributed
 from keras.layers.merge import concatenate
 from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
@@ -36,26 +36,29 @@ drop_rate=0.2 ## for powerful computer
 
 K.set_floatx(compute_precision);
 
-# build the model: stacked LSTMs
+# build the model: stacked CuDNNLSTMs
 print('Build model...')
 # network:
 with tf.device('/gpu:0'):
     noteInput  = Input(shape=(segLen, vecLen))
-    noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteInput)
+    noteEncode = CuDNNGRU(hidden_note, return_sequences=True)(noteInput)
 
 with tf.device('/gpu:1'):
     deltaInput = Input(shape=(segLen, maxdelta))
-    deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaInput)
+    deltaEncode = CuDNNGRU(hidden_delta, return_sequences=True)(deltaInput)
 
 with tf.device('/gpu:2'):
     instInput = Input(shape=(segLen, maxinst))
-    instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instInput)
+    instEncode   = CuDNNGRU(hidden_inst, return_sequences=True)(instInput)
 
 with tf.device('/gpu:3'):
     codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
-    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh')(codec)
-    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh')(codec)
-    codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='tanh')(codec)
+    codec = Dropout(drop_rate)(codec)
+    codec = CuDNNLSTM(600, return_sequences=True)(codec)
+    codec = Dropout(drop_rate)(codec)
+    codec = CuDNNLSTM(600, return_sequences=True)(codec)
+    codec = Dropout(drop_rate)(codec)
+    codec = CuDNNLSTM(600, return_sequences=False)(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_inst = Dense(maxinst, kernel_initializer='normal')(encoded)
