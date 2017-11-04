@@ -46,6 +46,7 @@ with tf.device('/gpu:1'):
 with tf.device('/gpu:3'):
     codec = concatenate([noteInput, deltaInput], axis=-1)
     codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh')(codec)
+    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh')(codec)
     codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='tanh')(codec)
     encoded = Dropout(drop_rate)(codec)
 

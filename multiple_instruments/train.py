@@ -123,6 +123,7 @@ def main():
 
     codec = concatenate([noteInput, deltaInput], axis=-1) ## return last state
     codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
+    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
     codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
 
