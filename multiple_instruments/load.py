@@ -6,7 +6,7 @@ config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
-from keras.layers import LSTM, GRU, BatchNormalization, RepeatVector, TimeDistributed
+from keras.layers import GRU, LSTM, BatchNormalization, RepeatVector, TimeDistributed
 from keras.layers.merge import concatenate
 from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
@@ -27,37 +27,35 @@ maxdelta=33 ## [0,32]
 maxinst=14
 maxpower=64
 batch_size=1
-hidden_delta=256
-hidden_note=256
-hidden_inst=256
+hidden_delta=128
+hidden_note=128
+hidden_inst=128
 filter_size=128
 kernel_size=3 ## midi program changes are by groups
 drop_rate=0.2 ## for powerful computer
 
 K.set_floatx(compute_precision);
 
-# build the model: stacked GRUs
+# build the model: stacked LSTMs
 print('Build model...')
 # network:
 with tf.device('/gpu:0'):
     noteInput  = Input(shape=(segLen, vecLen))
     noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate)(noteInput)
-    noteEncode = GRU(128, return_sequences=True, dropout=drop_rate)(noteEncode)
 
 with tf.device('/gpu:1'):
     deltaInput = Input(shape=(segLen, maxdelta))
     deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaInput)
-    deltaEncode = GRU(128, return_sequences=True, dropout=drop_rate)(deltaEncode)
 
 with tf.device('/gpu:2'):
     instInput = Input(shape=(segLen, maxinst))
     instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate)(instInput)
-    instEncode   = GRU(128, return_sequences=True, dropout=drop_rate)(instEncode)
 
 with tf.device('/gpu:3'):
     codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
-    codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='tanh')(codec)
-    codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='tanh')(codec)
+    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh')(codec)
+    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh')(codec)
+    codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='tanh')(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_inst = Dense(maxinst, kernel_initializer='normal')(encoded)

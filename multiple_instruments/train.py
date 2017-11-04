@@ -71,9 +71,9 @@ vecLen=60 ## [36, 95]
 maxdelta=33 ## [0, 32]
 maxinst=14
 batch_size = args.batch_size
-hidden_delta=256
-hidden_note=256
-hidden_inst=256
+hidden_delta=128
+hidden_note=128
+hidden_inst=128
 filter_size=128
 kernel_size=3 ## midi program changes are by groups
 drop_rate=0.2 ## for powerful computer
@@ -306,19 +306,17 @@ def main():
     # network:
     noteInput  = Input(shape=(segLen, vecLen))
     noteEncode = GRU(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteInput)
-    noteEncode = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteEncode)
 
     deltaInput = Input(shape=(segLen, maxdelta))
     deltaEncode = GRU(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaInput)
-    deltaEncode = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaEncode)
 
     instInput = Input(shape=(segLen, maxinst))
     instEncode   = GRU(hidden_inst, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instInput)
-    instEncode   = GRU(128, return_sequences=True, dropout=drop_rate, trainable=train_inst)(instEncode)
 
     codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
-    codec = LSTM(384, return_sequences=True, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
-    codec = LSTM(256, return_sequences=False, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
+    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
+    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
+    codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_inst = Dense(maxinst, kernel_initializer='normal', trainable=train_inst)(encoded)
