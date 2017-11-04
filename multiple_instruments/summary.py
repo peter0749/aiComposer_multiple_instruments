@@ -39,16 +39,12 @@ print('Build model...')
 # network:
 with tf.device('/gpu:0'):
     noteInput  = Input(shape=(segLen, vecLen))
-    noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate)(noteInput)
-    noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate)(noteEncode)
 
 with tf.device('/gpu:1'):
     deltaInput = Input(shape=(segLen, maxdelta))
-    deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaInput)
-    deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate)(deltaEncode)
 
 with tf.device('/gpu:3'):
-    codec = concatenate([noteEncode, deltaEncode], axis=-1)
+    codec = concatenate([noteInput, deltaInput], axis=-1)
     codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh')(codec)
     codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='tanh')(codec)
     encoded = Dropout(drop_rate)(codec)

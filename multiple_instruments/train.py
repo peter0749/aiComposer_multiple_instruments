@@ -118,14 +118,10 @@ def main():
     print('Build model...')
     # network:
     noteInput  = Input(shape=(segLen, vecLen))
-    noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteInput)
-    noteEncode = LSTM(hidden_note, return_sequences=True, dropout=drop_rate, trainable=train_note)(noteEncode)
 
     deltaInput = Input(shape=(segLen, maxdelta))
-    deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaInput)
-    deltaEncode = LSTM(hidden_delta, return_sequences=True, dropout=drop_rate, trainable=train_delta)(deltaEncode)
 
-    codec = concatenate([noteEncode, deltaEncode], axis=-1) ## return last state
+    codec = concatenate([noteInput, deltaInput], axis=-1) ## return last state
     codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
     codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
