@@ -6,7 +6,7 @@ config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
-from keras.layers import LSTM, LSTM, BatchNormalization, RepeatVector, TimeDistributed
+from keras.layers import LSTM, LSTM, RepeatVector, TimeDistributed
 from keras.layers.merge import concatenate
 from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
@@ -51,11 +51,9 @@ with tf.device('/gpu:3'):
     encoded = Dropout(drop_rate)(codec)
 
     fc_notes = Dense(vecLen, kernel_initializer='normal')(encoded) ## output PMF
-    fc_notes = BatchNormalization()(fc_notes)
     pred_notes = Activation('softmax', name='note_output')(fc_notes)
 
     fc_delta = Dense(maxdelta, kernel_initializer='normal')(encoded) ## output PMF
-    fc_delta = BatchNormalization()(fc_delta)
     pred_delta = Activation('softmax', name='time_output')(fc_delta) ## output PMF
 
 aiComposer = Model([noteInput, deltaInput], [pred_notes, pred_delta])
