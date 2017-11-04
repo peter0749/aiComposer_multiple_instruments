@@ -41,19 +41,15 @@ print('Build model...')
 # network:
 with tf.device('/gpu:0'):
     noteInput  = Input(shape=(segLen, vecLen))
-    noteEncode = CuDNNGRU(hidden_note, return_sequences=True)(noteInput)
 
 with tf.device('/gpu:1'):
     deltaInput = Input(shape=(segLen, maxdelta))
-    deltaEncode = CuDNNGRU(hidden_delta, return_sequences=True)(deltaInput)
 
 with tf.device('/gpu:2'):
     instInput = Input(shape=(segLen, maxinst))
-    instEncode   = CuDNNGRU(hidden_inst, return_sequences=True)(instInput)
 
 with tf.device('/gpu:3'):
-    codec = concatenate([noteEncode, deltaEncode, instEncode], axis=-1) ## return last state
-    codec = Dropout(drop_rate)(codec)
+    codec = concatenate([noteInput, deltaInput, instInput], axis=-1) ## return last state
     codec = CuDNNLSTM(600, return_sequences=True)(codec)
     codec = Dropout(drop_rate)(codec)
     codec = CuDNNLSTM(600, return_sequences=True)(codec)
