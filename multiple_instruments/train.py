@@ -2,7 +2,7 @@ from __future__ import print_function
 import os
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
-from keras.layers import CuDNNLSTM, CuDNNGRU, BatchNormalization, RepeatVector, TimeDistributed
+from keras.layers import CuDNNLSTM, CuDNNGRU, RepeatVector, TimeDistributed
 from keras.layers.merge import concatenate
 from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
@@ -319,15 +319,12 @@ def main():
     encoded = Dropout(drop_rate)(codec)
 
     fc_inst = Dense(maxinst, kernel_initializer='normal', trainable=train_inst)(encoded)
-    fc_inst = BatchNormalization(trainable=train_inst)(fc_inst)
     pred_inst = Activation('softmax', name='inst_output', trainable=train_inst)(fc_inst)
 
     fc_notes = Dense(vecLen, kernel_initializer='normal', trainable=train_note)(encoded) ## output PMF
-    fc_notes = BatchNormalization(trainable=train_note)(fc_notes)
     pred_notes = Activation('softmax', name='note_output', trainable=train_note)(fc_notes)
 
     fc_delta = Dense(maxdelta, kernel_initializer='normal', trainable=train_delta)(encoded) ## output PMF
-    fc_delta = BatchNormalization(trainable=train_delta)(fc_delta)
     pred_delta = Activation('softmax', name='time_output', trainable=train_delta)(fc_delta) ## output PMF
 
     aiComposer = Model([noteInput, deltaInput, instInput], [pred_notes, pred_delta, pred_inst])
