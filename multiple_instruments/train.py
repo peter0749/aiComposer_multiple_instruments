@@ -2,7 +2,7 @@ from __future__ import print_function
 import os
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
-from keras.layers import LSTM, LSTM, RepeatVector, TimeDistributed
+from keras.layers import CuDNNLSTM, RepeatVector, TimeDistributed
 from keras.layers.merge import concatenate
 from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
