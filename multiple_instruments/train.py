@@ -122,9 +122,11 @@ def main():
     deltaInput = Input(shape=(segLen, maxdelta))
 
     codec = concatenate([noteInput, deltaInput], axis=-1) ## return last state
-    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
-    codec = LSTM(600, return_sequences=True, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
-    codec = LSTM(600, return_sequences=False, dropout=drop_rate, activation='tanh', trainable=train_lstm)(codec)
+    codec = CuDNNLSTM(600, return_sequences=True, trainable=train_lstm)(codec)
+    codec = Dropout(drop_rate)(codec)
+    codec = CuDNNLSTM(600, return_sequences=True, trainable=train_lstm)(codec)
+    codec = Dropout(drop_rate)(codec)
+    codec = CuDNNLSTM(600, return_sequences=False, trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_notes = Dense(vecLen, kernel_initializer='normal', trainable=train_note)(encoded) ## output PMF
