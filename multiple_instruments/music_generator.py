@@ -84,7 +84,7 @@ def sample(preds, temperature=1.0, temperature_sd=0.05):
 
 def main():
     global segLen, vecLen
-    instProgram = [ args.main_instrument, args.accompany_instrument ]
+    instProgram = [ args.main_instrument ]
     model = load_model('./multi.h5')
     output = midi.Pattern(resolution=16) ## reduce dimension of ticks...
     track = [midi.Track() for _ in xrange(track_num)]
