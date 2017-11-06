@@ -10,7 +10,7 @@ import os.path
 
 step_size=1
 segLen=48
-track_num=2
+track_num=1
 maxrange=60 ## [36, 95]
 vecLen=maxrange*track_num
 maxdelta=33 ## [0, 32]
@@ -24,10 +24,8 @@ def Tempo2BPM(x):
 
 def pattern2map(pattern, maxtick):
     ResScale = float(pattern.resolution) / float(defaultRes)
-    instrument = -1
     data=[(0,0)]#tick , key (main+accompany)
     for track in pattern: ## main melody if instrument==0 else accompany
-        if instrument==1: break ## if main & accompany is set, then break.
         temp=[(0,0)] #tick, note
         speedRatio = 1.0
         Normal = 120.0
@@ -49,14 +47,11 @@ def pattern2map(pattern, maxtick):
                     continue ## no change on unit of ticks
                 speedRatio = float(changeBPM)/float(Normal)
             elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
-                if not noteOnDetected: instrument+=1
-                noteOnDetected = True
-                note = (v.data[0]-36)+instrument*maxrange
+                note = v.data[0]-36
                 tick = int(round(accumTick/ResScale))
                 temp.append((tick, note))
         temp = temp[1:-1]
         data.extend(temp)
-    if instrument!=1: raise Exception('# of track of piano != 2!')
     data = list(set(data)) ## remove duplicate data
     data.sort()
     for i in range(0, len(data)-1):
@@ -99,10 +94,6 @@ def makeSegment(data, maxlen, step, valid=False):
     nextseq = []
     for subdata in data:
         for i in xrange(0, len(subdata) - maxlen, step):
-            if subdata[i][0]!=-1:
-                test = np.array(subdata[i: i+maxlen+1])
-                if np.sum(test[:,1]>=maxrange)==0 or np.sum(test[:,1]<maxrange)==0: continue ## discard melody without accompany/main melody
-                del test
             sentences.append(subdata[i: i + maxlen])
             nextseq.append(subdata[i + maxlen])
     randIdx = np.random.permutation(len(sentences))

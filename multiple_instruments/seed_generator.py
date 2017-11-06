@@ -12,7 +12,7 @@ from tools import *
 
 step_size=1
 segLen=48
-track_num=2
+track_num=1
 maxrange=60 ## [36, 95]
 vecLen=maxrange*track_num
 maxdelta=33 ## [0, 32]

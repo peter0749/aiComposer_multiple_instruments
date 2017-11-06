@@ -23,14 +23,10 @@ parser.add_argument('--temp_sd', type=float, default=0, required=False,
                     help='Standard deviation of temperture.')
 parser.add_argument('--finger_number', type=int, default=5, required=False,
                     help='Maximum number of notes play at the same time.')
-parser.add_argument('--align_melody', type=int, default=4, required=False,
+parser.add_argument('--align', type=int, default=4, required=False,
                     help='Main melody alignment.')
-parser.add_argument('--align_accompany', type=int, default=8, required=False,
-                    help='Accompany alignment.')
 parser.add_argument('--bpm', type=float, default=120.0, required=False,
                     help='Bpm (speed)')
-parser.add_argument('--wake_up', type=int, default=0, required=False,
-                    help='Wake up one of the tracks if it fell asleep...')
 parser.add_argument('--do_format', action='store_true', default=False,
                     help='Format data before sending into model...')
 parser.add_argument('--debug', action='store_true', default=False,
@@ -41,8 +37,6 @@ parser.add_argument('--sticky', action='store_true', default=False,
                     help='')
 parser.add_argument('--main_instrument', type=int, default=0, required=False,
                     help='Main instrument')
-parser.add_argument('--accompany_instrument', type=int, default=46, required=False,
-                    help='Accompany instrument')
 
 args = parser.parse_args()
 tar_midi = args.output_midi_path
@@ -51,12 +45,7 @@ temperature_note = args.note_temp
 temperature_delta = args.delta_temp
 temperature_sd = args.temp_sd
 finger_limit = args.finger_number
-align_right = args.align_melody
-align_left  = args.align_accompany
-gcd_align = gcd(align_right, align_left)
-lcm_align = align_right//gcd_align * align_left
-wake_up = args.wake_up
-wake_up_w = wake_up*lcm_align ## threshold
+align = args.align
 do_format = args.do_format
 
 if args.debug:
@@ -69,7 +58,7 @@ defaultUnit = 500000
 changedSpeed= int(round(500000.0/speedRatio))
 
 segLen=48
-track_num=2
+track_num=1
 maxrange=60 #[36, 95]
 vecLen=maxrange*track_num
 maxdelta=33 #[0, 32]
@@ -121,7 +110,6 @@ def main():
     for _ in xrange(track_num):
         last[_] = -1
     tickAccum = 0
-    sleepy = 0 ## to measure sleepiness !?!?
     for i in xrange(noteNum):
         pred_note, pred_time = model.predict([notes, deltas], batch_size=1, verbose=0)
         for inst in xrange(track_num):
@@ -136,16 +124,10 @@ def main():
                         break
             if zs>=finger_limit: ## no more fingers
                 pred_time[0][0] = 1e-100
-        if wake_up>0: ## check if a track fell asleep
-            if sleepy>0 and sleepy>=wake_up_w:
-                pred_note[0][:maxrange] = 1e-100
-            elif sleepy<0 and -sleepy>=wake_up_w:
-                pred_note[0][maxrange:] = 1e-100
         key = int(sample(pred_note[0], temperature_note, temperature_sd))
-        note = key  % maxrange
-        inst = key // maxrange
+        note = key
+        inst = 0
         delta = int(sample(pred_time[0], temperature_delta, temperature_sd))
-        align = align_right if inst==0 else align_left
         if last[inst]==-1:
             track[inst].append(midi.SetTempoEvent(tick=0, data=[(changedSpeed>>16) &0xff, (changedSpeed>>8) &0xff, changedSpeed &0xff], channel=inst))
             track[inst].append(midi.ProgramChangeEvent(tick=0, data=[ instProgram[inst] ], channel=inst)) ## first event: program change to piano
@@ -193,7 +175,6 @@ def main():
                     notes[0, t, ln] = 1
                     notes[0, t-1, rn] = 1
                 else: break
-        sleepy += align_right if inst==0 else -align_left ## compute score, more notes on sheet -> more active
         print('processed: ', i+1, '/', noteNum)
     for i in xrange(track_num):
         if args.sticky and len(track[i])>0 and isinstance(track[i][-1], midi.NoteOnEvent):
