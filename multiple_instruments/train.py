@@ -190,7 +190,7 @@ def main():
         if epochs_delta>0:
             deltaClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'delta', valid=not_do_shift), steps_per_epoch=samples_per_epoch, epochs=epochs_delta, validation_data=generator(args.valid_dir, step_size, batch_size, 'delta', valid=True), validation_steps=5, callbacks=[deltaCheckPoint, deltaLogs]) ## fine tune tick classifier
             for l in delta_dict: full_dict[l].set_weights(delta_dict[l].get_weights())
-        aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, 'all', valid=True), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, 'all', valid=True), validation_steps=10, callbacks=[checkPoint, Logs])
+        aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, 'all', valid=not_do_shift), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, 'all', valid=True), validation_steps=10, callbacks=[checkPoint, Logs])
         aiComposer.save('./multi-%d.h5' % ite)
     aiComposer.save('./multi.h5')
 
