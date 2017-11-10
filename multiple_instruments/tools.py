@@ -74,7 +74,6 @@ def firstState(data, maxlen):
     return notes, times
 
 def enhanced(data, maxlen): ## offset -2, +2
-    mutation_rate = .1/maxlen
     res = [[(-1,-1)]*maxlen + data]
     for offset in [-2,4,2,-4]: ## -2, +2
         temp = data
@@ -84,14 +83,6 @@ def enhanced(data, maxlen): ## offset -2, +2
             else:
                 temp[i] = (d, np.clip(n+offset,maxrange,vecLen-1))
         res.append([(-1,-1)]*maxlen+temp)
-    for i,trk in enumerate(res):
-        for j,v in enumerate(trk):
-            tick, pitch = v
-            if np.random.rand()<mutation_rate:
-                pitch = int(np.clip(0,vecLen-1,pitch+np.random.randn()*2.))
-            if np.random.rand()<mutation_rate:
-                tick = int(np.clip(0,maxdelta-1,tick+np.random.randn()*2.))
-            res[i][j] = (tick, pitch) ## modify. add some noise
     return res
 
 def makeSegment(data, maxlen, step, valid=False):
@@ -99,12 +90,23 @@ def makeSegment(data, maxlen, step, valid=False):
         data = [data]
     else:
         data = enhanced(data, maxlen) ## shift tune on training set
+    mutation_rate = .05/maxlen ## E: every 20 segment has 1 mutated time step
     sentences = []
     nextseq = []
     for subdata in data:
         for i in xrange(0, len(subdata) - maxlen, step):
-            sentences.append(subdata[i: i + maxlen])
-            nextseq.append(subdata[i + maxlen])
+            X = subdata[i: i + maxlen] ## input
+            if not valid: ## add noise
+                for t, v in enumerate(X):
+                    tick, pitch = v
+                    if np.random.rand()<mutation_rate:
+                        pitch = int(np.clip(0,vecLen-1,pitch+np.random.randn()*2.))
+                    if np.random.rand()<mutation_rate:
+                        tick = int(np.clip(0,maxdelta-1,tick+np.random.randn()*2.))
+                    X[t] = (tick, pitch)
+            Y = subdata[i + maxlen] ## label
+            sentences.append(X)
+            nextseq.append(Y)
     randIdx = np.random.permutation(len(sentences))
     return np.array(sentences)[randIdx], np.array(nextseq)[randIdx]
 
