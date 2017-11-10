@@ -1,5 +1,9 @@
 from __future__ import print_function
 import os
+import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
 from keras.layers import CuDNNLSTM, RepeatVector, TimeDistributed
@@ -72,7 +76,7 @@ maxdelta=33 ## [0, 32]
 batch_size = args.batch_size
 hidden_delta=128
 hidden_note=256
-drop_rate=0.3 ## for powerful computer
+drop_rate=0.6 ## for powerful computer
 Normal=120.0
 defaultRes=16.0
 
