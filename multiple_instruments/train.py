@@ -77,7 +77,7 @@ maxdelta=33 ## [0, 32]
 batch_size = args.batch_size
 hidden_delta=128
 hidden_note=256
-drop_rate=0.6 ## for powerful computer
+drop_rate=0.5 ## for powerful computer
 Normal=120.0
 defaultRes=16.0
 
