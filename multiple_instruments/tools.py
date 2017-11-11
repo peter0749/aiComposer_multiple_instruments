@@ -82,7 +82,7 @@ def enhanced(data, maxlen): ## offset -2, +2
                 temp[i] = (d, np.clip(n+offset,0,maxrange-1))
             else:
                 temp[i] = (d, np.clip(n+offset,maxrange,vecLen-1))
-            if i>0 and temp[i][0]==0:
+            if i>maxlen and temp[i][0]==0:
                 if np.random.rand()<.1:
                     temp[i-1], temp[i] = temp[i], temp[i-1] ## swap
         res.append([(-1,-1)]*maxlen+temp)
@@ -102,6 +102,7 @@ def makeSegment(data, maxlen, step, valid=False):
             if not valid: ## add noise
                 for t, v in enumerate(X):
                     tick, pitch = v
+                    if tick==-1 or pitch==-1: continue
                     if np.random.rand()<mutation_rate:
                         pitch = int(np.clip(0,vecLen-1,pitch+np.random.randn()*2.))
                     if np.random.rand()<mutation_rate:
@@ -121,7 +122,7 @@ def seg2vec(segment, nextseg, segLen, vecLen, maxdelta):
     times_n = np.zeros((len(segment), maxdelta), dtype=np.bool)
     for i, seg in enumerate(segment):
         for t, note in enumerate(seg):
-            if note[0]==-1: continue
+            if note[0]==-1 or note[1]==-1: continue
             times[i, t, int(note[0])] = 1
             notes[i, t, int(note[1])] = 1
         times_n[i, int(nextseg[i][0])] = 1
