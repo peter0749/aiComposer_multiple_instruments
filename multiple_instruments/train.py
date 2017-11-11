@@ -8,6 +8,7 @@ from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
 from keras.layers import CuDNNLSTM, RepeatVector, TimeDistributed
 from keras.layers.merge import concatenate
+from keras import regularizers
 from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
@@ -91,7 +92,7 @@ def generator(path_name, step_size, batch_size, train_what='', valid=False):
             fullfile = str(path_name)+'/'+str(filename)
             try:
                 pattern = midi.read_midifile(fullfile)
-                if pattern.format != 1: continue
+                #if pattern.format != 1: continue
                 data = pattern2map(pattern,maxdelta-1)
                 seg, nextseg  = makeSegment(data, segLen, step_size, valid)
                 del data ## clean-up
@@ -129,11 +130,11 @@ def main():
     deltaInput = Input(shape=(segLen, maxdelta))
 
     codec = concatenate([noteInput, deltaInput], axis=-1) ## return last state
-    codec = CuDNNLSTM(600, return_sequences=True, trainable=train_lstm)(codec)
+    codec = CuDNNLSTM(600, return_sequences=True, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(0.01), trainable=train_lstm)(codec)
     codec = Dropout(drop_rate)(codec)
-    codec = CuDNNLSTM(600, return_sequences=True, trainable=train_lstm)(codec)
+    codec = CuDNNLSTM(600, return_sequences=True, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(0.01), trainable=train_lstm)(codec)
     codec = Dropout(drop_rate)(codec)
-    codec = CuDNNLSTM(600, return_sequences=False, trainable=train_lstm)(codec)
+    codec = CuDNNLSTM(600, return_sequences=False, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(0.01), trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_notes = Dense(vecLen, kernel_initializer='normal', trainable=train_note)(encoded) ## output PMF
