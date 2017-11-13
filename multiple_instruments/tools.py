@@ -75,17 +75,22 @@ def firstState(data, maxlen):
 
 def enhanced(data, maxlen): ## offset -2, +2
     res = [[(-1,-1)]*maxlen + data]
-    for offset in [-2,4,2,-4]: ## -2, +2
+    for offset in [-2,1,4,2,-1,-4]: ## -2, +2
         temp = data
+        temp2 = []
         for i, (d, n) in enumerate(temp):
             if n<maxrange: ## main
                 temp[i] = (d, np.clip(n+offset,0,maxrange-1))
             else:
                 temp[i] = (d, np.clip(n+offset,maxrange,vecLen-1))
+            temp2.append( (np.clip(0,maxdelta-1,2*d), temp[i][1]) )
             if i>maxlen and temp[i][0]==0:
                 if np.random.rand()<.1:
                     temp[i-1], temp[i] = temp[i], temp[i-1] ## swap
+                if np.random.rand()<.1:
+                    temp2[i-1], temp2[i] = temp2[i], temp2[i-1] ## swap
         res.append([(-1,-1)]*maxlen+temp)
+        res.append([(-1,-1)]*maxlen+temp2)
     return res
 
 def makeSegment(data, maxlen, step, valid=False):
