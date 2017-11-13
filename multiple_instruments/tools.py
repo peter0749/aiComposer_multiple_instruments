@@ -82,7 +82,7 @@ def enhanced(data, maxlen): ## offset -2, +2
                 temp[i] = (d, np.clip(n+offset,0,maxrange-1))
             else:
                 temp[i] = (d, np.clip(n+offset,maxrange,vecLen-1))
-            if i>maxlen and temp[i][0]==0:
+            if i>0 and temp[i][0]==0:
                 if np.random.rand()<.1:
                     temp[i-1], temp[i] = temp[i], temp[i-1] ## swap
         res.append([(-1,-1)]*maxlen+temp)
