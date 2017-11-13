@@ -75,7 +75,7 @@ def firstState(data, maxlen):
 
 def enhanced(data, maxlen): ## offset -2, +2
     res = [[(-1,-1)]*maxlen + data]
-    for offset in [-2,1,4,2,-1,-4]: ## -2, +2
+    for offset in [-2,4,2,-4]: ## -2, +2
         temp = data
         temp2 = []
         for i, (d, n) in enumerate(temp):
