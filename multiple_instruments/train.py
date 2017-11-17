@@ -152,7 +152,7 @@ def main():
     Logs = CSVLogger('logs.csv', separator=',', append=True)
     noteLogs = CSVLogger('logs_note.csv', separator=',', append=True)
     deltaLogs = CSVLogger('logs_delta.csv', separator=',', append=True)
-    optimizer = RMSprop(lr=learning_rate, clipnorm=1.)
+    optimizer = RMSprop(lr=learning_rate, decay=learning_rate/epochs, clipnorm=1.)
     if ( os.path.isfile('./top_weight.h5')):  ## fine-tuning
         aiComposer.load_weights('./top_weight.h5')
     aiComposer.summary()
