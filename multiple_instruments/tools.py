@@ -111,9 +111,9 @@ def makeSegment(data, maxlen, step, valid=False):
             Y = subdata[i + maxlen] ## label
             sentences.append(X)
             nextseq.append(Y)
-    #randIdx = np.random.permutation(len(sentences))
-    #return np.array(sentences)[randIdx], np.array(nextseq)[randIdx]
-    return np.array(sentences), np.array(nextseq)
+    randIdx = np.random.permutation(len(sentences))
+    return np.array(sentences)[randIdx], np.array(nextseq)[randIdx]
+    #return np.array(sentences), np.array(nextseq)
 
 def seg2vec(segment, nextseg, segLen, vecLen, maxdelta):
     notes = np.zeros((len(segment), segLen, vecLen), dtype=np.bool)
