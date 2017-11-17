@@ -9,7 +9,7 @@ from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
 from keras.layers import CuDNNLSTM, RepeatVector, TimeDistributed
 from keras.layers.merge import concatenate
 from keras import regularizers
-from keras.optimizers import SGD
+from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
 from keras import backend as K
@@ -152,7 +152,7 @@ def main():
     Logs = CSVLogger('logs.csv', separator=',', append=True)
     noteLogs = CSVLogger('logs_note.csv', separator=',', append=True)
     deltaLogs = CSVLogger('logs_delta.csv', separator=',', append=True)
-    optimizer = SGD(lr=learning_rate, momentum=0.99, clipnorm=1.)
+    optimizer = RMSprop(lr=learning_rate, clipnorm=1.)
     if ( os.path.isfile('./top_weight.h5')):  ## fine-tuning
         aiComposer.load_weights('./top_weight.h5')
     aiComposer.summary()
