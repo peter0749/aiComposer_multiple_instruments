@@ -130,11 +130,11 @@ def main():
     deltaInput = Input(shape=(segLen, maxdelta))
 
     codec = concatenate([noteInput, deltaInput], axis=-1) ## return last state
-    codec = CuDNNLSTM(600, return_sequences=True, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(1e-4), bias_regularizer=regularizers.l1(1e-4), trainable=train_lstm)(codec)
+    codec = CuDNNLSTM(600, return_sequences=True, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(5e-4), bias_regularizer=regularizers.l1(5e-4), trainable=train_lstm)(codec)
     codec = Dropout(drop_rate)(codec)
     codec = CuDNNLSTM(600, return_sequences=True, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(2e-4), bias_regularizer=regularizers.l1(2e-4), trainable=train_lstm)(codec)
     codec = Dropout(drop_rate)(codec)
-    codec = CuDNNLSTM(600, return_sequences=False, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(5e-4), bias_regularizer=regularizers.l1(5e-4), trainable=train_lstm)(codec)
+    codec = CuDNNLSTM(600, return_sequences=False, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(1e-4), bias_regularizer=regularizers.l1(1e-4), trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_notes = Dense(vecLen, kernel_initializer='normal', trainable=train_note)(encoded) ## output PMF
