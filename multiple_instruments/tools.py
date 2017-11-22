@@ -75,7 +75,7 @@ def firstState(data, maxlen):
 
 def enhanced(data, maxlen): ## offset -2, +2
     res = [[(-1,-1)]*maxlen + data]
-    for offset in [-2,4,2,-4]: ## -2, +2
+    for offset in [-2,2]: ## -2, +2
         temp = data
         for i, (d, n) in enumerate(temp):
             if n<maxrange: ## main
@@ -89,7 +89,7 @@ def enhanced(data, maxlen): ## offset -2, +2
     return res
 
 def makeSegment(data, maxlen, step, valid=False):
-    if valid:
+    if valid or np.random.rand()<0.9:
         data = [data]
     else:
         data = enhanced(data, maxlen) ## shift tune on training set
