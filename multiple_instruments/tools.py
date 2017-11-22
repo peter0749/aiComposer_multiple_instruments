@@ -102,13 +102,15 @@ def makeSegment(data, maxlen, step, valid=False):
             if not valid: ## add noise
                 for t, v in enumerate(X):
                     tick, pitch = v
+                    tick_new = tick
                     if tick==-1 or pitch==-1: continue
                     if np.random.rand()<mutation_rate:
                         pitch = int(np.clip(0,vecLen-1,pitch+np.random.randn()*2.))
                     if np.random.rand()<mutation_rate:
-                        tick = int(np.clip(0,maxdelta-1,tick+np.random.randn()*2.))
-                    X[t] = (tick, pitch)
-            Y = subdata[i + maxlen] ## label
+                        tick_new = int(np.clip(0,maxdelta-1,tick+np.random.randn()*2.))
+                    X[t] = (tick_new, pitch)
+            Y_tick, Y_pitch = subdata[i + maxlen] ## label
+            Y = (Y_tick+(tick-tick_new), Y_pitch) ## fix time shifting
             sentences.append(X)
             nextseq.append(Y)
     randIdx = np.random.permutation(len(sentences))
