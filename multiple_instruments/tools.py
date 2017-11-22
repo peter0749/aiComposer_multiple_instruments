@@ -89,7 +89,7 @@ def enhanced(data, maxlen): ## offset -2, +2
     return res
 
 def makeSegment(data, maxlen, step, valid=False):
-    if valid or np.random.rand()<0.9:
+    if valid:
         data = [data]
     else:
         data = enhanced(data, maxlen) ## shift tune on training set
