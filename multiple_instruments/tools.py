@@ -105,9 +105,9 @@ def makeSegment(data, maxlen, step, valid=False):
                     tick_new = tick
                     if tick==-1 or pitch==-1: continue
                     if np.random.rand()<mutation_rate:
-                        pitch = int(np.clip(0,vecLen-1,pitch+np.random.randn()*2.))
+                        pitch = int(np.clip(pitch+np.random.randn()*2., 0,vecLen-1))
                     if np.random.rand()<mutation_rate:
-                        tick_new = int(np.clip(0,maxdelta-1,tick+np.random.randn()*2.))
+                        tick_new = int(np.clip(tick+np.random.randn()*2., 0,maxdelta-1))
                     X[t] = (tick_new, pitch)
             Y_tick, Y_pitch = subdata[i + maxlen] ## label
             Y_tick = np.clip(Y_tick+(tick-tick_new), 0, maxdelta-1) ## fix time shifting
