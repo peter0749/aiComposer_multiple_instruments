@@ -110,7 +110,8 @@ def makeSegment(data, maxlen, step, valid=False):
                         tick_new = int(np.clip(0,maxdelta-1,tick+np.random.randn()*2.))
                     X[t] = (tick_new, pitch)
             Y_tick, Y_pitch = subdata[i + maxlen] ## label
-            Y = (Y_tick+(tick-tick_new), Y_pitch) ## fix time shifting
+            Y_tick = np.clip(Y_tick+(tick-tick_new), 0, maxdelta-1) ## fix time shifting
+            Y = (Y_tick, Y_pitch)
             sentences.append(X)
             nextseq.append(Y)
     randIdx = np.random.permutation(len(sentences))
