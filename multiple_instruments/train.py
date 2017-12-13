@@ -7,6 +7,7 @@ from keras.layers.merge import concatenate
 from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
+from keras import regularizers
 from keras import backend as K
 import numpy as np
 import midi
@@ -311,11 +312,11 @@ def main():
     instInput = Input(shape=(segLen, maxinst))
 
     codec = concatenate([noteInput, deltaInput, instInput], axis=-1) ## return last state
-    codec = CuDNNLSTM(600, return_sequences=True, trainable=train_lstm)(codec)
+    codec = CuDNNLSTM(600, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(0.001), return_sequences=True, trainable=train_lstm)(codec)
     codec = Dropout(drop_rate)(codec)
-    codec = CuDNNLSTM(600, return_sequences=True, trainable=train_lstm)(codec)
+    codec = CuDNNLSTM(600, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(0.001), return_sequences=True, trainable=train_lstm)(codec)
     codec = Dropout(drop_rate)(codec)
-    codec = CuDNNLSTM(600, return_sequences=False, trainable=train_lstm)(codec)
+    codec = CuDNNLSTM(600, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(0.001), return_sequences=False, trainable=train_lstm)(codec)
     encoded = Dropout(drop_rate)(codec)
 
     fc_inst = Dense(maxinst, kernel_initializer='normal', trainable=train_inst)(encoded)
