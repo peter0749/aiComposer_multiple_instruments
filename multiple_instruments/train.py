@@ -6,7 +6,7 @@ config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
-from keras.layers import LSTM, RepeatVector, TimeDistributed
+from keras.layers import LSTM, RepeatVector, TimeDistributed, BatchNormalization
 from keras.layers.merge import concatenate
 from keras import regularizers
 from keras.optimizers import RMSprop

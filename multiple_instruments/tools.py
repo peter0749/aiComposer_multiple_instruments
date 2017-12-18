@@ -142,7 +142,7 @@ def seg2vec(segment, nextseg, segLen, vecLen, maxdelta):
             powers[i, t, 0] = note[2]
         times_n[i, int(nextseg[i][0])] = 1
         notes_n[i, int(nextseg[i][1])] = 1
-        powers_n[i, 0] = nextseg[i][1]
+        powers_n[i, 0] = nextseg[i][2]
     return notes, times, powers, notes_n, times_n, powers_n
 
 
