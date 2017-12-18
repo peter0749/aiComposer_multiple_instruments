@@ -41,6 +41,7 @@ deltaInput = Input(shape=(segLen, maxdelta))
 volInput = Input(shape=(segLen, 1))
 
 c1 = concatenate([noteInput, deltaInput, volInput], axis=-1)
+c1 = Flatten()(c1)
 c1 = Dropout(drop_rate)(c1)
 fc1 = Dense(128, activation='relu')(c1)
 fc2 = Dropout(drop_rate)(fc1)

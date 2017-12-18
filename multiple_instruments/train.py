@@ -49,8 +49,6 @@ compute_precision='float32'
 learning_rate = args.lr
 loops = args.loop
 epochs = args.epochs
-epochs_note = args.epochs_note
-epochs_delta = args.epochs_delta
 samples_per_epoch = args.sample_per_epoch
 step_size=1
 segLen=48
@@ -90,11 +88,11 @@ def generator(path_name, step_size, batch_size, valid=False):
                 continue
             for i in xrange(0, len(note)-batch_size, batch_size):
                 idx = range(i, i+batch_size)
-                yield ([note[idx],time[idx], power[idx]], n_power)
+                yield ([note[idx],time[idx], power[idx]], n_power[idx])
             l = len(note)%batch_size
             if l > 0:
                 idx = range(len(note)-l,len(note))
-                yield ([note[idx],time[idx], power[idx]], n_power)
+                yield ([note[idx],time[idx], power[idx]], n_power[idx])
 
 def main():
     # network:
@@ -106,6 +104,7 @@ def main():
     volInput = Input(shape=(segLen, 1))
 
     c1 = concatenate([noteInput, deltaInput, volInput], axis=-1)
+    c1 = Flatten()(c1)
     c1 = Dropout(drop_rate)(c1)
     fc1 = Dense(128, activation='relu')(c1)
     fc2 = Dropout(drop_rate)(fc1)
