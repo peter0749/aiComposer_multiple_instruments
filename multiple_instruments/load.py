@@ -6,7 +6,7 @@ config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
-from keras.layers import LSTM, RepeatVector, TimeDistributed
+from keras.layers import LSTM, RepeatVector, TimeDistributed, BatchNormalization
 from keras.layers.merge import concatenate
 from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
@@ -25,7 +25,6 @@ segLen=48
 track_num=1
 vecLen=60*track_num ## two tracks
 maxdelta=33 ## [0,32]
-maxpower=64
 batch_size=1
 hidden_delta=128
 hidden_note=256
@@ -37,28 +36,19 @@ K.set_floatx(compute_precision);
 # build the model: stacked LSTMs
 print('Build model...')
 # network:
-with tf.device('/gpu:0'):
-    noteInput  = Input(shape=(segLen, vecLen))
+noteInput  = Input(shape=(segLen, vecLen))
+deltaInput = Input(shape=(segLen, maxdelta))
+volInput = Input(shape=(segLen, 1))
 
-with tf.device('/gpu:1'):
-    deltaInput = Input(shape=(segLen, maxdelta))
+c1 = concatenate([noteInput, deltaInput, volInput], axis=-1)
+c1 = Dropout(drop_rate)(c1)
+fc1 = Dense(128, activation='relu')(c1)
+fc2 = Dropout(drop_rate)(fc1)
+fc_vol = Dense(1)(fc2)
+fc_vol = BatchNormalization()(fc_vol)
+fc_vol = Activation('sigmoid')(fc_vol)
 
-with tf.device('/gpu:3'):
-    codec = concatenate([noteInput, deltaInput], axis=-1)
-    codec = LSTM(600, return_sequences=True)(codec)
-    codec = Dropout(drop_rate)(codec)
-    codec = LSTM(600, return_sequences=True)(codec)
-    codec = Dropout(drop_rate)(codec)
-    codec = LSTM(600, return_sequences=False)(codec)
-    encoded = Dropout(drop_rate)(codec)
-
-    fc_notes = Dense(vecLen, kernel_initializer='normal')(encoded) ## output PMF
-    pred_notes = Activation('softmax', name='note_output')(fc_notes)
-
-    fc_delta = Dense(maxdelta, kernel_initializer='normal')(encoded) ## output PMF
-    pred_delta = Activation('softmax', name='time_output')(fc_delta) ## output PMF
-
-aiComposer = Model([noteInput, deltaInput], [pred_notes, pred_delta])
+aiComposer = Model([noteInput, deltaInput, volInput], fc_vol)
 if ( os.path.isfile('./top_weight.h5')):  ## fine-tuning
     aiComposer.load_weights('./top_weight.h5')
-aiComposer.save('./multi.h5')
+aiComposer.save('./velocity.h5')

@@ -85,6 +85,7 @@ def sample(preds, temperature=1.0, temperature_sd=0.05):
 def main():
     global segLen, vecLen
     instProgram = [ args.main_instrument ]
+    vol_model = load_model('./velocity.h5')
     model = load_model('./multi.h5')
     output = midi.Pattern(resolution=16) ## reduce dimension of ticks...
     track = [midi.Track() for _ in xrange(track_num)]
@@ -92,6 +93,7 @@ def main():
         output.append(track[i])
     notes = np.zeros((1, segLen, vecLen))
     deltas = np.zeros((1, segLen, maxdelta))
+    powers = np.zeros((1, segLen, 1), dtype=np.float32)
     if args.init=='seed':
         seed = np.load('./seed.npz')
         seedIdx = np.random.randint(len(seed['notes']))
@@ -102,16 +104,13 @@ def main():
     elif args.init=='random': ## random init
         notes[:,:,:] = np.eye(vecLen)[np.random.choice(vecLen, segLen)]
         deltas[:,:,:]= np.eye(maxdelta)[np.random.choice(maxdelta, segLen)]
-    else: ## zero
-        notes[:,:,:] = 0
-        deltas[:,:,:]= 0
-
     last = np.zeros(track_num)
     for _ in xrange(track_num):
         last[_] = -1
     tickAccum = 0
     for i in xrange(noteNum):
         pred_note, pred_time = model.predict([notes, deltas], batch_size=1, verbose=0)
+        volume = vol_model.predict([notes, deltas, powers], batch_size=1, verbose=0).flatten()[0]
         for inst in xrange(track_num):
             zs = 1 ## how many notes play at the same time? self += 1
             for t in reversed(range(len(track[inst]))): ## this limits # of notes play at the same time
@@ -154,15 +153,18 @@ def main():
                     findLastNoteOn = track[inst][t].data[0]
                     track[inst].append(midi.NoteOffEvent(tick=0, data=[ findLastNoteOn, 0], channel=inst))
                     break
-        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), 127], channel=inst))
+        real_vol = int(np.clip(volume*255, 1, 255))
+        track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), real_vol], channel=inst))
         tickAccum += delta
         last[inst] = tickAccum
         notes = np.roll(notes, -1, axis=1)
         deltas = np.roll(deltas, -1, axis=1)
-        notes[0, segLen-1, :]=0 ## reset last event
-        notes[0, segLen-1, key]=1 ## set predicted event
-        deltas[0, segLen-1, :]=0 ## reset last event
-        deltas[0, segLen-1, delta]=1 ## set predicted event
+        powers = np.roll(powers, -1, axis=1)
+        notes[0, -1, :]=0 ## reset last event
+        notes[0, -1, key]=1 ## set predicted event
+        deltas[0, -1, :]=0 ## reset last event
+        deltas[0, -1, delta]=1 ## set predicted event
+        powers[0,-1,0] = volume
         if do_format:
             for t in reversed(range(1, segLen)):
                 rd = np.where(deltas[0, t]==1)[0][0] ## right delta
