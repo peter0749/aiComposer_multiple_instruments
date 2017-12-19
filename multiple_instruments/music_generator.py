@@ -19,6 +19,8 @@ parser.add_argument('--note_temp', type=float, default=0, required=False,
                     help='Temperture of notes.')
 parser.add_argument('--delta_temp', type=float, default=0, required=False,
                     help='Temperture of time.')
+parser.add_argument('--vol_temp', type=float, default=0, required=False,
+                    help='Temperture of velocity.')
 parser.add_argument('--temp_sd', type=float, default=0, required=False,
                     help='Standard deviation of temperture.')
 parser.add_argument('--finger_number', type=int, default=5, required=False,
@@ -43,6 +45,7 @@ tar_midi = args.output_midi_path
 noteNum  = args.n
 temperature_note = args.note_temp
 temperature_delta = args.delta_temp
+temperature_vol = args.vol_temp
 temperature_sd = args.temp_sd
 finger_limit = args.finger_number
 align = args.align
@@ -62,6 +65,7 @@ track_num=1
 maxrange=60 #[36, 95]
 vecLen=maxrange*track_num
 maxdelta=33 #[0, 32]
+maxvol=32
 
 import keras
 from keras.models import Sequential, load_model
@@ -93,7 +97,7 @@ def main():
         output.append(track[i])
     notes = np.zeros((1, segLen, vecLen))
     deltas = np.zeros((1, segLen, maxdelta))
-    powers = np.zeros((1, segLen, 1), dtype=np.float32)
+    powers = np.zeros((1, segLen, maxvol), dtype=np.bool)
     if args.init=='seed':
         seed = np.load('./seed.npz')
         seedIdx = np.random.randint(len(seed['notes']))
@@ -110,7 +114,7 @@ def main():
     tickAccum = 0
     for i in xrange(noteNum):
         pred_note, pred_time = model.predict([notes, deltas], batch_size=1, verbose=0)
-        volume = vol_model.predict([notes, deltas, powers], batch_size=1, verbose=0).flatten()[0]
+        volume = vol_model.predict([notes, deltas, powers], batch_size=1, verbose=0)
         for inst in xrange(track_num):
             zs = 1 ## how many notes play at the same time? self += 1
             for t in reversed(range(len(track[inst]))): ## this limits # of notes play at the same time
@@ -153,7 +157,7 @@ def main():
                     findLastNoteOn = track[inst][t].data[0]
                     track[inst].append(midi.NoteOffEvent(tick=0, data=[ findLastNoteOn, 0], channel=inst))
                     break
-        real_vol = int(np.clip(volume*255, 1, 255))
+        real_vol = int(np.clip(sample(volume[0], temperature_vol, temperature_sd)*8, 1, 255))
         track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), real_vol], channel=inst))
         tickAccum += delta
         last[inst] = tickAccum
@@ -164,7 +168,8 @@ def main():
         notes[0, -1, key]=1 ## set predicted event
         deltas[0, -1, :]=0 ## reset last event
         deltas[0, -1, delta]=1 ## set predicted event
-        powers[0,-1,0] = volume
+        powers[0,-1, :] = 0
+        powers[0,-1, volume] = 1
         if do_format:
             for t in reversed(range(1, segLen)):
                 rd = np.where(deltas[0, t]==1)[0][0] ## right delta

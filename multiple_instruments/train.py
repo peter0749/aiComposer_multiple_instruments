@@ -54,6 +54,7 @@ step_size=1
 segLen=48
 track_num=1
 maxrange=60 ## [36, 95]
+maxvol=32
 vecLen=maxrange*track_num
 maxdelta=33 ## [0, 32]
 batch_size = args.batch_size
@@ -108,9 +109,9 @@ def main():
     c1 = Dropout(drop_rate)(c1)
     fc1 = Dense(128, activation='relu')(c1)
     fc2 = Dropout(drop_rate)(fc1)
-    fc_vol = Dense(1)(fc2)
+    fc_vol = Dense(maxvol)(fc2)
     fc_vol = BatchNormalization()(fc_vol)
-    fc_vol = Activation('sigmoid')(fc_vol)
+    fc_vol = Activation('softmax')(fc_vol)
 
     aiComposer = Model([noteInput, deltaInput, volInput], fc_vol)
     checkPoint = ModelCheckpoint(filepath="top_weight.h5", verbose=1, save_best_only=True, save_weights_only=True, period=1)
@@ -122,7 +123,7 @@ def main():
 
     ## compile models:
     aiComposer.compile(
-            loss = 'mse',
+            loss = 'categorical_crossentropy',
             optimizer=optimizer)
 
     for ite in xrange(loops):

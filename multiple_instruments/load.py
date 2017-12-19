@@ -45,9 +45,9 @@ c1 = Flatten()(c1)
 c1 = Dropout(drop_rate)(c1)
 fc1 = Dense(128, activation='relu')(c1)
 fc2 = Dropout(drop_rate)(fc1)
-fc_vol = Dense(1)(fc2)
+fc_vol = Dense(32)(fc2)
 fc_vol = BatchNormalization()(fc_vol)
-fc_vol = Activation('sigmoid')(fc_vol)
+fc_vol = Activation('softmax')(fc_vol)
 
 aiComposer = Model([noteInput, deltaInput, volInput], fc_vol)
 if ( os.path.isfile('./top_weight.h5')):  ## fine-tuning

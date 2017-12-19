@@ -14,6 +14,7 @@ track_num=1
 maxrange=60 ## [36, 95]
 vecLen=maxrange*track_num
 maxdelta=33 ## [0, 32]
+maxvol=32
 defaultRes=16.0
 
 def Tempo2BPM(x):
@@ -24,8 +25,6 @@ def Tempo2BPM(x):
 
 def pattern2map(pattern, maxtick):
     ResScale = float(pattern.resolution) / float(defaultRes)
-    vol_min=1e9
-    vol_max=-1
     data=[(0,0,0)]#tick , key (main+accompany), vol
     for track in pattern: ## main melody if instrument==0 else accompany
         temp=[(0,0,0)] #tick, note, vol
@@ -51,8 +50,6 @@ def pattern2map(pattern, maxtick):
             elif isinstance(v, midi.NoteOnEvent) and v.data[0]>=36 and v.data[0]<=95 and v.data[1]>0:
                 note = v.data[0]-36
                 vol  = v.data[1]
-                vol_min = min(vol_min, vol)
-                vol_max = max(vol_max, vol)
                 tick = int(round(accumTick/ResScale))
                 temp.append((tick, note, vol))
         temp = temp[1:-1]
@@ -63,7 +60,7 @@ def pattern2map(pattern, maxtick):
         tick = data[i+1][0] - data[i][0]
         tick = int(maxtick if tick>maxtick else tick) ## set a threshold
         note = int(data[i+1][1])
-        vol  = float(data[i+1][2]-vol_min+1) / float(vol_max-vol_min+1)
+        vol  = int(np.clip(data[i+1][2]//8, 0, maxvol-1))
         data[i] = (tick,note, vol)
     data = data[0:-2] ## data must have two elements. ow crashs
     return data
@@ -129,20 +126,20 @@ def makeSegment(data, maxlen, step, valid=False):
 def seg2vec(segment, nextseg, segLen, vecLen, maxdelta):
     notes = np.zeros((len(segment), segLen, vecLen), dtype=np.bool)
     times = np.zeros((len(segment), segLen, maxdelta), dtype=np.bool)
-    powers = np.zeros((len(segment), segLen, 1), dtype=np.float32)
+    powers = np.zeros((len(segment), segLen, maxvol), dtype=np.bool)
 
     notes_n = np.zeros((len(segment), vecLen), dtype=np.bool)
     times_n = np.zeros((len(segment), maxdelta), dtype=np.bool)
-    powers_n = np.zeros((len(segment), 1), dtype=np.float32)
+    powers_n = np.zeros((len(segment), maxvol), dtype=np.bool)
     for i, seg in enumerate(segment):
         for t, note in enumerate(seg):
             if note[0]==-1 or note[1]==-1: continue
             times[i, t, int(note[0])] = 1
             notes[i, t, int(note[1])] = 1
-            powers[i, t, 0] = note[2]
+            powers[i, t, int(note[2])] = 1
         times_n[i, int(nextseg[i][0])] = 1
         notes_n[i, int(nextseg[i][1])] = 1
-        powers_n[i, 0] = nextseg[i][2]
+        powers_n[i, int(nextseg[i][2])] = 1
     return notes, times, powers, notes_n, times_n, powers_n
 
 
