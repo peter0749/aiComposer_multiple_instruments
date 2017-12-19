@@ -42,7 +42,7 @@ deltaInput = Input(shape=(segLen, maxdelta))
 volInput = Input(shape=(segLen, maxvol))
 
 c1 = concatenate([noteInput, deltaInput, volInput], axis=-1)
-fc1 = CuDNNLSTM(128, return_sequences=False, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(0.001))(c1)
+fc1 = CuDNNLSTM(128, return_sequences=False, unit_forget_bias=True)(c1)
 fc2 = Dropout(drop_rate)(fc1)
 fc_vol = Dense(maxvol)(fc2)
 fc_vol = BatchNormalization()(fc_vol)
