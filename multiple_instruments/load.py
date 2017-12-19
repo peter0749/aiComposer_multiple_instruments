@@ -25,6 +25,7 @@ segLen=48
 track_num=1
 vecLen=60*track_num ## two tracks
 maxdelta=33 ## [0,32]
+maxvol=32
 batch_size=1
 hidden_delta=128
 hidden_note=256
