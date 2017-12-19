@@ -157,7 +157,8 @@ def main():
                     findLastNoteOn = track[inst][t].data[0]
                     track[inst].append(midi.NoteOffEvent(tick=0, data=[ findLastNoteOn, 0], channel=inst))
                     break
-        real_vol = int(np.clip(sample(volume[0], temperature_vol, temperature_sd)*8, 1, 255))
+        real_lab = int(sample(volume[0], temperature_vol, temperature_sd))
+        real_vol = int(np.clip(real_lab*8, 1, 255))
         track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), real_vol], channel=inst))
         tickAccum += delta
         last[inst] = tickAccum
@@ -169,7 +170,7 @@ def main():
         deltas[0, -1, :]=0 ## reset last event
         deltas[0, -1, delta]=1 ## set predicted event
         powers[0,-1, :] = 0
-        powers[0,-1, volume] = 1
+        powers[0,-1, real_lab] = 1
         if do_format:
             for t in reversed(range(1, segLen)):
                 rd = np.where(deltas[0, t]==1)[0][0] ## right delta
