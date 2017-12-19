@@ -6,7 +6,7 @@ config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
-from keras.layers import CuDNNLSTM, RepeatVector, TimeDistributed, BatchNormalization
+from keras.layers import LSTM, RepeatVector, TimeDistributed, BatchNormalization
 from keras.layers.merge import concatenate
 from keras.optimizers import RMSprop
 from keras.utils.io_utils import HDF5Matrix
@@ -41,15 +41,13 @@ deltaInput = Input(shape=(segLen, maxdelta))
 volInput = Input(shape=(segLen, maxvol))
 
 c1 = concatenate([noteInput, deltaInput, volInput], axis=-1)
-fc1 = CuDNNLSTM(128, return_sequences=False, unit_forget_bias=True, recurrent_regularizer=regularizers.l2(0.001))(c1)
+fc1 = LSTM(128, return_sequences=False)(c1)
 fc2 = Dropout(drop_rate)(fc1)
 fc_vol = Dense(maxvol)(fc2)
 fc_vol = BatchNormalization()(fc_vol)
 fc_vol = Activation('softmax')(fc_vol)
 
 aiComposer = Model([noteInput, deltaInput, volInput], fc_vol)
-
-aiComposer.summary()
-from keras.utils import plot_model
-plot_model(aiComposer, to_file='model.png', show_shapes=True)
-
+if ( os.path.isfile('./top_weight.h5')):  ## fine-tuning
+    aiComposer.load_weights('./top_weight.h5')
+aiComposer.save('./velocity.h5')
