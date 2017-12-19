@@ -38,7 +38,7 @@ print('Build model...')
 # network:
 noteInput  = Input(shape=(segLen, vecLen))
 deltaInput = Input(shape=(segLen, maxdelta))
-volInput = Input(shape=(segLen, 1))
+volInput = Input(shape=(segLen, 32))
 
 c1 = concatenate([noteInput, deltaInput, volInput], axis=-1)
 c1 = Flatten()(c1)

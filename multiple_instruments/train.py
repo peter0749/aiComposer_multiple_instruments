@@ -102,7 +102,7 @@ def main():
     # network:
     noteInput  = Input(shape=(segLen, vecLen))
     deltaInput = Input(shape=(segLen, maxdelta))
-    volInput = Input(shape=(segLen, 1))
+    volInput = Input(shape=(segLen, maxvol))
 
     c1 = concatenate([noteInput, deltaInput, volInput], axis=-1)
     c1 = Flatten()(c1)
@@ -124,7 +124,9 @@ def main():
     ## compile models:
     aiComposer.compile(
             loss = 'categorical_crossentropy',
-            optimizer=optimizer)
+            optimizer=optimizer,
+            metrics=['acc']
+            )
 
     for ite in xrange(loops):
         aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, valid=not_do_shift), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, valid=True), validation_steps=80, callbacks=[checkPoint, Logs])
