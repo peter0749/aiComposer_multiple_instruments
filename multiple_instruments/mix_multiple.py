@@ -81,8 +81,8 @@ note_weights.extend([1e-6]*(len(models)-len(note_weights)))
 tick_weights.extend([1e-6]*(len(models)-len(tick_weights)))
 
 def mix_multi(notes, ticks, model_list, note_weights, tick_weights):
-    p_note = np.zeros((1, notes.shape[-2], notes.shape[-1]),dtype=np.float32)
-    p_tick = np.zeros((1, ticks.shape[-2], ticks.shape[-1]),dtype=np.float32)
+    p_note = np.zeros((1, notes.shape[-1]),dtype=np.float32)
+    p_tick = np.zeros((1, ticks.shape[-1]),dtype=np.float32)
     for i, model in enumerate(model_list):
         p_n, p_t = model.predict([notes, ticks])
         p_note += p_n*note_weights[i]
