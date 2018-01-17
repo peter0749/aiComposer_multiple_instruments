@@ -114,6 +114,9 @@ def main():
     tickAccum = 0
     for i in xrange(noteNum):
         pred_note, pred_time = model.predict([notes, deltas], batch_size=1, verbose=0)
+        pred_time = pred_time[0]
+        if align>1:
+            pred_time = pred_time[::align]
         volume = vol_model.predict([notes, deltas, powers], batch_size=1, verbose=0)
         for inst in xrange(track_num):
             zs = 1 ## how many notes play at the same time? self += 1
@@ -126,21 +129,18 @@ def main():
                     else:
                         break
             if zs>=finger_limit: ## no more fingers
-                pred_time[0][0] = 1e-100
+                pred_time[0] = 1e-100
         key = int(sample(pred_note[0], temperature_note, temperature_sd))
         note = key
         inst = 0
-        delta = int(sample(pred_time[0], temperature_delta, temperature_sd))
+        delta = int(sample(pred_time, temperature_delta, temperature_sd))
+        if align>1:
+            delta*=align
         if last[inst]==-1:
             track[inst].append(midi.SetTempoEvent(tick=0, data=[(changedSpeed>>16) &0xff, (changedSpeed>>8) &0xff, changedSpeed &0xff], channel=inst))
             track[inst].append(midi.ProgramChangeEvent(tick=0, data=[ instProgram[inst] ], channel=inst)) ## first event: program change to piano
             last[inst]=0
         diff = int(tickAccum - last[inst]) ## how many ticks passed before it plays
-        if align>1:
-            new_reach = tickAccum+delta ## accum ticks before this event + this key plays after received signal?
-            if new_reach % align != 0: ## if not aligned
-                new_reach += align-(new_reach%align)
-            delta = min(32, max(0, new_reach - tickAccum)) ## aligned tick
         ## note alignment:
         while diff>127:
             track[inst].append(midi.ControlChangeEvent(tick=127, channel=inst, data=[3, 0])) ## append 'foo' event (data[0]==3 -> undefine)
