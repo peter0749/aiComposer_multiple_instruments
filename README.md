@@ -18,13 +18,13 @@ cd aiComposer_multiple_instruments/multiple_instruments
 
 Download the model for dynamics and place it under the same directory of `music_generator.py`.
 
-[model for dynamics](./)
+[model for dynamics](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/velocity.h5)
 
 Rename it to `velocity.h5`.
 
 Download the model and place it under the same directory of `music_generator.py`.
 
-[model with mozart style](./)
+[model with mozart style](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/mz.h5)
 
 Rename it to `multi.h5`.
 
@@ -50,7 +50,19 @@ All trained models are in the `release` tag.
 
 ### Model List
 
+Model of different styles
 
+[fugue](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/fugue.h5)
+
+[jazz](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/jazz.h5)
+
+[jig](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/jig.h5)
+
+[waltz](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/waltz.h5)
+
+[touhou?!](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/touhou.h5)
+
+[folk](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/nott.h5)
 
 ### Arguments
 
