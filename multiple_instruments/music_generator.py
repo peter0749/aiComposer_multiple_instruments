@@ -33,8 +33,8 @@ parser.add_argument('--do_format', action='store_true', default=False,
                     help='Format data before sending into model...')
 parser.add_argument('--debug', action='store_true', default=False,
                     help='Fix random seed')
-parser.add_argument('--init', type=str, default='seed', required=False,
-        help='Initialization: seed/random/zero (default: seed)')
+parser.add_argument('--init', type=str, default='zero', required=False,
+        help='Initialization: seed/random/zero (default: zero)')
 parser.add_argument('--sticky', action='store_true', default=False,
                     help='')
 parser.add_argument('--main_instrument', type=int, default=0, required=False,
