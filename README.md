@@ -56,6 +56,8 @@ All trained models are in the `release` tag.
 
 Model of different styles
 
+[mozart](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/mz.h5)
+
 [fugue](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/fugue.h5)
 
 [jazz](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/jazz.h5)
