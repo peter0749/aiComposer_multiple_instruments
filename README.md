@@ -86,6 +86,10 @@ optional arguments:
 
 ```
 
+`note_temp` controls the "creativity" of pitch. Higher `note_temp` means higher "creativity" but less regularity, and Vice versa.
+
+`delta_temp` controls the "creativity" of rythm. Higher `delta_temp` means higher "creativity" but less regularity, and Vice versa.
+
 ### Training loss plot
 
 Only show validation loss plots and accuracy plots of `nott.h5` and `mz.h5`
