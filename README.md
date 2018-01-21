@@ -2,7 +2,7 @@
 
 Automatic music generation
 
-How to use:
+### How to use
 
 First, clone the branch: `dynamic`:
 
@@ -16,7 +16,14 @@ Enter the repository:
 cd aiComposer_multiple_instruments
 ```
 
+Download the model for dynamics and place it under the same directory of `music_generator.py`.
+
+[model for dynamics](./)
+
+Rename it to `velocity.h5`.
+
 Download the model and place it under the same directory of `music_generator.py`.
+
 [model with mozart style](./)
 
 Rename it to `multi.h5`.
@@ -27,9 +34,15 @@ Finally, generate some music with mozart style!
 python music_generator.py mz.mid --n 800 --note_temp 0.6 --delta_temp 0.6 --vol_temp 0.4 --align 2 --finger_number 5 --init zero --bpm 100 --debug
 ```
 
-The generated midi file is named `mz.mid`. Under the same directory of `music_generator.py`
+The generated midi file is named `mz.mid`. 
 
-Arguments:
+Under the same directory of `music_generator.py`
+
+You can also try to generate different style of music with different model.
+
+All trained models are in the `release` tag.
+
+### Arguments
 
 ```
 
@@ -62,4 +75,20 @@ optional arguments:
   --init INIT           Initialization: seed/random/zero (default: zero)
 
 ```
+
+### Training loss plot
+
+Only show validation loss plots and accuracy plots of `nott.h5` and `mz.h5`
+
+Plots of `nott.h5`:
+
+![nott loss](./plots/nott_loss.png)
+
+![nott acc](./plots/nott_acc.png)
+
+Plots of `mz.h5`:
+
+![mz loss](./plots/mz_loss.png)
+
+![mz acc](./plots/mz_acc.png)
 
