@@ -92,13 +92,13 @@ Only show validation loss plots and accuracy plots of `nott.h5` and `mz.h5`
 
 Plots of `nott.h5`:
 
-![nott loss](./plots/nott_loss.png)
+![nott loss](./multiple_instruments/plots/nott_loss.png)
 
-![nott acc](./plots/nott_acc.png)
+![nott acc](./multiple_instruments/plots/nott_acc.png)
 
 Plots of `mz.h5`:
 
-![mz loss](./plots/mz_loss.png)
+![mz loss](./multiple_instruments/plots/mz_loss.png)
 
-![mz acc](./plots/mz_acc.png)
+![mz acc](./multiple_instruments/plots/mz_acc.png)
 
