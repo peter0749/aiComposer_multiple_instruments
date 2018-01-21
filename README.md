@@ -1,5 +1,65 @@
-# aiComposer_multiple_instruments
+# aiComposer
 
-A Keras implementation of music generation
+Automatic music generation
 
-[DEMO](https://www.youtube.com/watch?v=VLamjodzv5k)
+How to use:
+
+First, clone the branch: `dynamic`:
+
+```
+ git clone -b dynamic --single-branch https://github.com/peter0749/aiComposer_multiple_instruments
+```
+
+Enter the repository:
+
+```
+cd aiComposer_multiple_instruments
+```
+
+Download the model and place it under the same directory of `music_generator.py`.
+[model with mozart style](./)
+
+Rename it to `multi.h5`.
+
+Finally, generate some music with mozart style!
+
+```
+python music_generator.py mz.mid --n 800 --note_temp 0.6 --delta_temp 0.6 --vol_temp 0.4 --align 2 --finger_number 5 --init zero --bpm 100 --debug
+```
+
+The generated midi file is named `mz.mid`. Under the same directory of `music_generator.py`
+
+Arguments:
+
+```
+
+music_generator.py [-h] [--n N] [--note_temp NOTE_TEMP]
+                          [--delta_temp DELTA_TEMP] [--temp_sd TEMP_SD]
+                          [--finger_number FINGER_NUMBER] [--align ALIGN]
+                          [--bpm BPM] [--do_format] [--debug] [--init INIT]
+                          [--sticky] [--main_instrument MAIN_INSTRUMENT]
+                          midi
+
+Music Generation
+
+positional arguments:
+  midi                  Path to the output midi file.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --n N                 Number of notes to generate.
+  --note_temp NOTE_TEMP
+                        Temperture of notes.
+  --delta_temp DELTA_TEMP
+                        Temperture of time.
+  --temp_sd TEMP_SD     Standard deviation of temperture.
+  --finger_number FINGER_NUMBER
+                        Maximum number of notes play at the same time.
+  --align ALIGN         Main melody alignment.
+  --bpm BPM             Bpm (speed)
+  --do_format           Format data before sending into model...
+  --debug               Fix random seed
+  --init INIT           Initialization: seed/random/zero (default: zero)
+
+```
+
