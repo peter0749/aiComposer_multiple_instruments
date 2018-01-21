@@ -2,6 +2,10 @@
 
 Automatic music generation
 
+### Dependency
+
+python2.7, keras, numpy, python-midi, h5py
+
 ### How to use
 
 First, clone the branch: `dynamic`:
@@ -18,11 +22,19 @@ cd aiComposer_multiple_instruments/multiple_instruments
 
 Download the model for dynamics and place it under the same directory of `music_generator.py`.
 
+```
+curl "https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/velocity.h5" -o velocity.h5
+```
+
 [model for dynamics](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/velocity.h5)
 
 Rename it to `velocity.h5`.
 
 Download the model and place it under the same directory of `music_generator.py`.
+
+```
+curl "https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/mz.h5" -o multi.h5
+```
 
 [model with mozart style](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/mz.h5)
 
