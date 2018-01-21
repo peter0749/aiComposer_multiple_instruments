@@ -145,3 +145,13 @@ Training dataset of `nott.h5`
 [dataset](http://www-etud.iro.umontreal.ca/~boulanni/Nottingham.zip)
 
 (Nottingham music dataset)
+
+### Some examples
+
+[mz.mp3](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/mz.mp3)
+
+[mz_1.mp3](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/mz_1.mp3)
+
+[mz_2.mp3](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/mz_2.mp3)
+
+[nott.mp3](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/nott.mp3)
