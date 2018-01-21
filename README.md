@@ -38,9 +38,19 @@ The generated midi file is named `mz.mid`.
 
 Under the same directory of `music_generator.py`
 
+The `mz.mid` file should be identical to the file `example/mz.mid`.
+
+If you want to generate different music, just remove the `--debug` argument.
+
 You can also try to generate different style of music with different model.
 
+Which is the `multi.h5` file.
+
 All trained models are in the `release` tag.
+
+### Model List
+
+
 
 ### Arguments
 

@@ -1,10 +1,6 @@
 *.pyc
 *.h5
 *.out
-*.mid
-*.MID
-*.midi
-*.MIDI
 *.npy
 *.npz
 *.csv
