@@ -124,3 +124,16 @@ Plots of `mz.h5`:
 
 ![mz acc](./multiple_instruments/plots/mz_acc.png)
 
+### Training dataset
+
+Training dataset of `mz.h5`
+
+[dataset](https://www.dropbox.com/s/7gt2qdobdingqk3/mozart_keyboard.tar.bz2?dl=0)
+
+(Midi files crawled from Internet)
+
+Training dataset of `nott.h5`
+
+[dataset](http://www-etud.iro.umontreal.ca/~boulanni/Nottingham.zip)
+
+(Nottingham music dataset)
