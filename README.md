@@ -13,7 +13,7 @@ First, clone the branch: `dynamic`:
 Enter the repository:
 
 ```
-cd aiComposer_multiple_instruments
+cd aiComposer_multiple_instruments/multiple_instruments
 ```
 
 Download the model for dynamics and place it under the same directory of `music_generator.py`.
