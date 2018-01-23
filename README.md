@@ -78,6 +78,8 @@ Model of different styles
 
 [folk](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/nott.h5)
 
+[animenz?!](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/animenz.h5)
+
 ### Arguments
 
 ```
