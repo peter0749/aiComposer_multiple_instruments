@@ -2,7 +2,7 @@
 
 Automatic music generation
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/qvEO5ARgAsE" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+[![video](http://img.youtube.com/vi/qvEO5ARgAsE/0.jpg)](https://www.youtube.com/watch?v=qvEO5ARgAsE)
 
 ### Dependency
 
