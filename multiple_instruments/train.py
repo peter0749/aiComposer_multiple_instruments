@@ -1,5 +1,9 @@
 from __future__ import print_function
 import os
+import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
 from keras.models import Sequential, load_model, Model
 from keras.layers import Dense, Activation, Dropout, Input, Flatten, Conv1D
 from keras.layers import CuDNNLSTM, CuDNNGRU, RepeatVector, TimeDistributed
@@ -134,10 +138,9 @@ def normal_pattern2map(pattern, maxtick): ## tick range [0,63] #64
             if hasattr(v, 'tick') :
                 accumTick = accumTick + float(v.tick)/speedRatio
             if isinstance(v, midi.ProgramChangeEvent):
-                if hasattr(v, 'channel') and v.channel==9:
-                    instrument = 128 # Percussion Key. a.k.a. drums
-                else:
-                    instrument = v.data[0]
+                if hasattr(v, 'channel') and v.channel==9: # no drums
+                    break
+                instrument = v.data[0]
                 if not inRange(instrument): ## not a desired instrument, discard this track
                     break
             elif isinstance(v, midi.SetTempoEvent):
