@@ -159,3 +159,7 @@ Training dataset of `nott.h5`
 [mz_2.mp3](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/mz_2.mp3)
 
 [nott.mp3](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/nott.mp3)
+
+[animenz.mp3](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/animenz.mp3)
+
+[animenz.mid](https://github.com/peter0749/aiComposer_multiple_instruments/releases/download/v0.1.0/animenz.mid)
