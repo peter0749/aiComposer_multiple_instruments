@@ -185,9 +185,8 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
                 accumTick = accumTick + float(v.tick)/speedRatio
             if isinstance(v, midi.ProgramChangeEvent):
                 if hasattr(v, 'channel') and v.channel==9:
-                    instrument = 128 # Percussion Key. a.k.a. drums
-                else:
-                    instrument = v.data[0]
+                    break
+                instrument = v.data[0]
                 ch2ins[v.channel] = instrument
             elif isinstance(v, midi.SetTempoEvent):
                 changeBPM = Tempo2BPM(v)
