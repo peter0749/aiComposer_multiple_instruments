@@ -2,6 +2,8 @@
 
 Automatic music generation
 
+Demo (Youtube):
+
 [![video](http://img.youtube.com/vi/qvEO5ARgAsE/0.jpg)](https://www.youtube.com/watch?v=qvEO5ARgAsE)
 
 ### Dependency
