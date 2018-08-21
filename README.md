@@ -6,7 +6,13 @@ Automatic music generation
 
 ### Dependency
 
-python2.7, keras, numpy, python-midi, h5py
+python2.7/3.x, keras, numpy, python-midi/python3-midi, h5py
+
+To install python3-midi:
+
+```
+pip install git+https://github.com/louisabraham/python3-midi
+```
 
 ### How to use
 
