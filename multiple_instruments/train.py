@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import os
 import tensorflow as tf
 config = tf.ConfigProto()
@@ -87,12 +87,12 @@ def generator(path_name, step_size, batch_size, valid=False):
             except:
                 sys.stderr.write('something wrong...:\\')
                 continue
-            for i in xrange(0, len(note)-batch_size, batch_size):
-                idx = range(i, i+batch_size)
+            for i in range(0, len(note)-batch_size, batch_size):
+                idx = list(range(i, i+batch_size))
                 yield ([note[idx],time[idx], power[idx]], n_power[idx])
             l = len(note)%batch_size
             if l > 0:
-                idx = range(len(note)-l,len(note))
+                idx = list(range(len(note)-l,len(note)))
                 yield ([note[idx],time[idx], power[idx]], n_power[idx])
 
 def main():
@@ -126,7 +126,7 @@ def main():
             metrics=['acc']
             )
 
-    for ite in xrange(loops):
+    for ite in range(loops):
         aiComposer.fit_generator(generator(args.train_dir, step_size, batch_size, valid=not_do_shift), steps_per_epoch=samples_per_epoch, epochs=epochs, validation_data=generator(args.valid_dir, step_size, batch_size, valid=True), validation_steps=80, callbacks=[checkPoint, Logs])
         aiComposer.save('./velocity-%d.h5' % ite)
     aiComposer.save('./velocity.h5')
