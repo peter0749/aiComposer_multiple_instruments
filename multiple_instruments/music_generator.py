@@ -183,7 +183,7 @@ def main():
                     notes[0, t, ln] = 1
                     notes[0, t-1, rn] = 1
                 else: break
-        print(('processed: ', i+1, '/', noteNum))
+        print('processed: %d/%d'%(i+1, noteNum))
     for i in range(track_num):
         if args.sticky and len(track[i])>0 and isinstance(track[i][-1], midi.NoteOnEvent):
             track[i].append(midi.NoteOffEvent(tick=0, data=[ track[i][-1].data[0], 0], channel=i))
