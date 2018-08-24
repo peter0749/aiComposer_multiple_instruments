@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import os
 import keras
 from keras.models import Sequential, load_model, Model
@@ -58,8 +58,8 @@ def generator(path_name, step_size, batch_size, train_what='', valid=False):
             except:
                 sys.stderr.write('something wrong...:\\')
                 continue
-            for i in xrange(0, len(note)-batch_size, batch_size):
-                idx = range(i, i+batch_size)
+            for i in range(0, len(note)-batch_size, batch_size):
+                idx = list(range(i, i+batch_size))
                 if train_what=='note':
                     yield ([note[idx],time[idx]], [n_note[idx]])
                 elif train_what=='delta':
@@ -68,7 +68,7 @@ def generator(path_name, step_size, batch_size, train_what='', valid=False):
                     yield ([note[idx],time[idx]], [n_note[idx],n_time[idx]])
             l = len(note)%batch_size
             if l > 0:
-                idx = range(len(note)-l,len(note))
+                idx = list(range(len(note)-l,len(note)))
                 if train_what=='note':
                     yield ([note[idx],time[idx]], [n_note[idx]])
                 elif train_what=='delta':

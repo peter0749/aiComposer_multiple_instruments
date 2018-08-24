@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import os
 import numpy as np
 import midi
@@ -97,7 +97,7 @@ def makeSegment(data, maxlen, step, valid=False):
     sentences = []
     nextseq = []
     for subdata in data:
-        for i in xrange(0, len(subdata) - maxlen, step):
+        for i in range(0, len(subdata) - maxlen, step):
             X = subdata[i: i + maxlen] ## input
             tick_offset = 0
             if not valid: ## add noise

@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import os
 import tensorflow as tf
 config = tf.ConfigProto()
@@ -102,8 +102,8 @@ def generator(path_name, step_size, batch_size, train_what='', valid=False):
             except:
                 sys.stderr.write('something wrong...:\\')
                 continue
-            for i in xrange(0, len(note)-batch_size, batch_size):
-                idx = range(i, i+batch_size)
+            for i in range(0, len(note)-batch_size, batch_size):
+                idx = list(range(i, i+batch_size))
                 if train_what=='note':
                     yield ([note[idx],time[idx]], [n_note[idx]])
                 elif train_what=='delta':
@@ -112,7 +112,7 @@ def generator(path_name, step_size, batch_size, train_what='', valid=False):
                     yield ([note[idx],time[idx]], [n_note[idx],n_time[idx]])
             l = len(note)%batch_size
             if l > 0:
-                idx = range(len(note)-l,len(note))
+                idx = list(range(len(note)-l,len(note)))
                 if train_what=='note':
                     yield ([note[idx],time[idx]], [n_note[idx]])
                 elif train_what=='delta':
@@ -184,7 +184,7 @@ def main():
         if layer_name in delta_dict:
             delta_dict[layer_name].set_weights(full_dict[layer_name].get_weights())
 
-    for ite in xrange(loops):
+    for ite in range(loops):
         if epochs_note>0:
             noteClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'note', valid=not_do_shift), steps_per_epoch=samples_per_epoch, epochs=epochs_note, validation_data=generator(args.valid_dir, step_size, batch_size, 'note', valid=True), validation_steps=5, callbacks=[noteCheckPoint, noteLogs]) ## fine tune note classifier
             for l in note_dict: full_dict[l].set_weights(note_dict[l].get_weights())

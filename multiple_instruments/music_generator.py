@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import numpy as np
 import random
 import sys
@@ -87,8 +87,8 @@ def main():
     instProgram = [ args.main_instrument ]
     model = load_model('./multi.h5')
     output = midi.Pattern(resolution=16) ## reduce dimension of ticks...
-    track = [midi.Track() for _ in xrange(track_num)]
-    for i in xrange(track_num):
+    track = [midi.Track() for _ in range(track_num)]
+    for i in range(track_num):
         output.append(track[i])
     notes = np.zeros((1, segLen, vecLen))
     deltas = np.zeros((1, segLen, maxdelta))
@@ -97,7 +97,7 @@ def main():
         seedIdx = np.random.randint(len(seed['notes']))
         notes[:,:,:] = seed['notes'][seedIdx,:,:]
         deltas[:,:,:] = seed['times'][seedIdx,:,:]
-        print('Using seed: %s' % seed['names'][seedIdx])
+        print(('Using seed: %s' % seed['names'][seedIdx]))
         seed = None ## release
     elif args.init=='random': ## random init
         notes[:,:,:] = np.eye(vecLen)[np.random.choice(vecLen, segLen)]
@@ -107,14 +107,14 @@ def main():
         deltas[:,:,:]= 0
 
     last = np.zeros(track_num)
-    for _ in xrange(track_num):
+    for _ in range(track_num):
         last[_] = -1
     tickAccum = 0
-    for i in xrange(noteNum):
+    for i in range(noteNum):
         pred_note, pred_time = model.predict([notes, deltas], batch_size=1, verbose=0)
-        for inst in xrange(track_num):
+        for inst in range(track_num):
             zs = 1 ## how many notes play at the same time? self += 1
-            for t in reversed(range(len(track[inst]))): ## this limits # of notes play at the same time
+            for t in reversed(list(range(len(track[inst])))): ## this limits # of notes play at the same time
                 if hasattr(track[inst][t], 'tick'):
                     if isinstance(track[inst][t], midi.NoteOnEvent):
                         pred_note[0][(track[inst][t].data[0]-36)+inst*maxrange] = 1e-100
@@ -147,7 +147,7 @@ def main():
 
         ## note on:
         if args.sticky:
-            for t in reversed(range(len(track[inst]))):
+            for t in reversed(list(range(len(track[inst])))):
                 if isinstance(track[inst][t], midi.NoteOffEvent):
                     break
                 elif isinstance(track[inst][t], midi.NoteOnEvent):
@@ -164,7 +164,7 @@ def main():
         deltas[0, segLen-1, :]=0 ## reset last event
         deltas[0, segLen-1, delta]=1 ## set predicted event
         if do_format:
-            for t in reversed(range(1, segLen)):
+            for t in reversed(list(range(1, segLen))):
                 rd = np.where(deltas[0, t]==1)[0][0] ## right delta
                 rn = np.where(notes[0, t]==1)[0][0] ## right note
                 ld = np.where(deltas[0, t-1]==1)[0][0] ## left ..
@@ -175,8 +175,8 @@ def main():
                     notes[0, t, ln] = 1
                     notes[0, t-1, rn] = 1
                 else: break
-        print('processed: ', i+1, '/', noteNum)
-    for i in xrange(track_num):
+        print('processed: %d/%d'%(i+1, noteNum))
+    for i in range(track_num):
         if args.sticky and len(track[i])>0 and isinstance(track[i][-1], midi.NoteOnEvent):
             track[i].append(midi.NoteOffEvent(tick=0, data=[ track[i][-1].data[0], 0], channel=i))
         track[i].append( midi.EndOfTrackEvent(tick=0, channel=i) )
