@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import keras
 from keras.models import Sequential, load_model
 import numpy as np
@@ -57,8 +57,8 @@ maxdelta=33 #[0, 32]
 maxinst =14
 
 invMap = dict()
-for i in xrange(8): invMap[i] = i+40 ## 0~7 -> 40~47
-for i in xrange(8, 11): invMap[i] = i+48 ## 8~10 -> 56~58
+for i in range(8): invMap[i] = i+40 ## 0~7 -> 40~47
+for i in range(8, 11): invMap[i] = i+48 ## 8~10 -> 56~58
 invMap[11] = 60
 invMap[12] = 72
 invMap[13] = 73
@@ -78,8 +78,8 @@ def main():
     global segLen, vecLen
     model = load_model('./multi.h5')
     output = midi.Pattern(resolution=16) ## reduce dimension of ticks...
-    track = [midi.Track() for _ in xrange(maxinst)]
-    for i in xrange(maxinst):
+    track = [midi.Track() for _ in range(maxinst)]
+    for i in range(maxinst):
         output.append(track[i])
     notes = np.zeros((1, segLen, vecLen))
     deltas = np.zeros((1, segLen, maxdelta))
@@ -89,14 +89,14 @@ def main():
     limits[:8] = string_lim ## at most 2 instruments play for each type of instruments
     limits[8:12] = brass_lim ## for brass
     limits[12:] = pipe_lim ## for pipes
-    for _ in xrange(maxinst):
+    for _ in range(maxinst):
         last[_] = -1
     tickAccum = 0
-    for i in xrange(noteNum):
+    for i in range(noteNum):
         pred_note, pred_time, pred_inst = model.predict([notes, deltas, insts], batch_size=1, verbose=0)
         inst = int(sample(pred_inst[0], temperature_inst))
         zs = 1 ## how many notes play at the same time? self += 1
-        for t in reversed(range(len(track[inst]))): ## this limits # of notes play at the same time
+        for t in reversed(list(range(len(track[inst])))): ## this limits # of notes play at the same time
             if hasattr(track[inst][t], 'tick'):
                 if isinstance(track[inst][t], midi.NoteOnEvent):
                     pred_note[0][track[inst][t].data[0]-36] = 1e-100
@@ -141,8 +141,8 @@ def main():
         track[inst].append(midi.NoteOnEvent(tick=delta, data=[ int(note+36), 127], channel=inst))
         tickAccum += delta
         last[inst] = tickAccum
-        print('processed: ', i+1, '/', noteNum)
-    for i in xrange(maxinst):
+        print('processed: %d/%d'%(i+1, noteNum))
+    for i in range(maxinst):
         track[i].append( midi.EndOfTrackEvent(tick=1, channel=i) )
     midi.write_midifile(tar_midi, output)
 

@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import os
 import tensorflow as tf
 config = tf.ConfigProto()
@@ -90,13 +90,13 @@ K.set_floatx(compute_precision)
 
 ## instrument mapping:
 instMap = dict()
-for i in xrange(8): instMap[i+40] = i ## 40~47 -> 0~7
-for i in xrange(8,11): instMap[i+48] = i ## 56~58 -> 8~10
+for i in range(8): instMap[i+40] = i ## 40~47 -> 0~7
+for i in range(8,11): instMap[i+48] = i ## 56~58 -> 8~10
 instMap[60] = 11
 instMap[72] = 12
 instMap[73] = 13
 
-inRange = lambda(x): (x>=40 and x<=47) or (x>=56 and x<=58) or (x==60) or (x==72) or (x==73)
+inRange = lambda x: (x>=40 and x<=47) or (x>=56 and x<=58) or (x==60) or (x==72) or (x==73)
 
 # Sorted x
 def purge(x):
@@ -204,7 +204,7 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
             data.extend(temp)
     data = list(set(data)) ## remove duplicate data
     temp = []
-    for i in xrange(len(data)): ## channel -> instrument
+    for i in range(len(data)): ## channel -> instrument
         acc = data[i][0]
         note= data[i][1]
         ch  = data[i][2]
@@ -229,10 +229,10 @@ def ch_pattern2map(pattern, maxtick): ## tick range [0,63] #64
 def makeSegment(data, maxlen, step):
     sentences = []
     nextseq = []
-    for i in xrange(0, len(data) - maxlen, step):
+    for i in range(0, len(data) - maxlen, step):
         test = np.array(data[i: i+maxlen+1])
         FAIL = False
-        for j in xrange(len(inst_range)-1):
+        for j in range(len(inst_range)-1):
             if np.sum((test[:,2]>=inst_range[j])*(test[:,2]<inst_range[j+1]))==0:
                 FAIL = True
                 break
@@ -280,8 +280,8 @@ def generator(path_name, step_size, batch_size, train_what=''):
                 pattern = data = seg = nextseg = None
                 sys.stderr.write('something wrong...:\\')
                 continue
-            for i in xrange(0, len(note)-batch_size, batch_size):
-                idx = range(i, i+batch_size)
+            for i in range(0, len(note)-batch_size, batch_size):
+                idx = list(range(i, i+batch_size))
                 if train_what=='inst':
                     yield ([note[idx],time[idx],inst[idx]], [n_inst[idx]])
                 elif train_what=='note':
@@ -292,7 +292,7 @@ def generator(path_name, step_size, batch_size, train_what=''):
                     yield ([note[idx],time[idx],inst[idx]], [n_note[idx],n_time[idx],n_inst[idx]])
             l = len(note)%batch_size
             if l > 0:
-                idx = range(len(note)-l,len(note))
+                idx = list(range(len(note)-l,len(note)))
                 if train_what=='inst':
                     yield ([note[idx],time[idx],inst[idx]], [n_inst[idx]])
                 elif train_what=='note':
@@ -381,7 +381,7 @@ def main():
         if layer_name in delta_dict:
             delta_dict[layer_name].set_weights(full_dict[layer_name].get_weights())
 
-    for ite in xrange(loops):
+    for ite in range(loops):
         if epochs_inst>0:
             instClass.fit_generator(generator(args.train_dir, step_size, batch_size, 'inst'), steps_per_epoch=samples_per_epoch, epochs=epochs_inst, validation_data=generator(args.valid_dir, step_size, batch_size, 'inst'), validation_steps=5, callbacks=[instCheckPoint, instLogs]) ## fine tune instrument classifier
             for l in inst_dict: full_dict[l].set_weights(inst_dict[l].get_weights())
